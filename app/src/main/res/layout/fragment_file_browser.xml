@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ListView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/file_browser"
+    android:name="com.stephenmcgruer.simpleupnp.fragments.FileBrowserFragment"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.stephenmcgruer.simpleupnp.fragments.FileBrowserFragment"
+    tools:listitem="@layout/fragment_file_browser_item" />
