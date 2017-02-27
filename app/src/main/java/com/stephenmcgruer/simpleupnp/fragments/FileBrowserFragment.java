@@ -31,6 +31,9 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import com.google.android.gms.cast.MediaInfo;
+import com.google.android.gms.cast.MediaMetadata;
+import com.google.android.gms.cast.MediaQueueItem;
 import com.stephenmcgruer.simpleupnp.R;
 
 import org.fourthline.cling.android.AndroidUpnpService;
@@ -44,10 +47,13 @@ import org.fourthline.cling.model.types.UDN;
 import org.fourthline.cling.support.contentdirectory.callback.Browse;
 import org.fourthline.cling.support.model.BrowseFlag;
 import org.fourthline.cling.support.model.DIDLContent;
+import org.fourthline.cling.support.model.Res;
 import org.fourthline.cling.support.model.container.Container;
 import org.fourthline.cling.support.model.item.Item;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -176,8 +182,32 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection, 
         } else if (listItem.holdsContainer()) {
             selectContainer(listItem.getContainer());
         } else {
-            // TODO(smcgruer): Play individual file.
-            Toast.makeText(getActivity(), "Selected file", Toast.LENGTH_SHORT).show();
+            List<Item> items = new ArrayList<>();
+            items.add(listItem.getItem());
+            playItems(items);
+        }
+    }
+
+    private void playItems(List<Item> itemsToPlay) {
+        if (mListener == null)
+            return;
+
+        // Convert to MediaQueueItem for Cast.
+        List<MediaQueueItem> mediaItems = new ArrayList<>();
+        for (Item item : itemsToPlay) {
+            // Assumption: first non-null resource is the URL. No idea if correct.
+            Res urlResource = item.getFirstResource();
+            if (urlResource != null) {
+                MediaMetadata metadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK);
+                metadata.putString(MediaMetadata.KEY_TITLE, item.getTitle());
+                MediaInfo mediaInfo = new MediaInfo.Builder(urlResource.getValue())
+                        .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
+                        .setContentType("audio/mp3")
+                        .setMetadata(metadata)
+                        .build();
+                mediaItems.add(new MediaQueueItem.Builder(mediaInfo).build());
+            }
+            mListener.playFiles(mediaItems);
         }
     }
 
@@ -190,6 +220,8 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection, 
 
     public interface OnFragmentInteractionListener {
         void onQuitFileBrowsing();
+
+        void playFiles(List<MediaQueueItem> mediaItems);
     }
 
     private static class FileBrowserListItem {
@@ -227,6 +259,10 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection, 
 
         ContainerWrapper getContainer() {
             return mContainer;
+        }
+
+        Item getItem() {
+            return mItem;
         }
 
         boolean holdsContainer() {

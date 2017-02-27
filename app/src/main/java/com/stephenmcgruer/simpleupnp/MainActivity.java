@@ -24,14 +24,22 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
+import android.widget.Toast;
 
+import com.google.android.gms.cast.MediaQueueItem;
+import com.google.android.gms.cast.MediaStatus;
 import com.google.android.gms.cast.framework.CastButtonFactory;
 import com.google.android.gms.cast.framework.CastContext;
+import com.google.android.gms.cast.framework.CastSession;
+import com.google.android.gms.cast.framework.media.RemoteMediaClient;
 import com.stephenmcgruer.simpleupnp.fragments.FileBrowserFragment;
 import com.stephenmcgruer.simpleupnp.fragments.ServerBrowserFragment;
 
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
 import org.fourthline.cling.model.meta.Device;
+
+import java.util.Collections;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements
         ServerBrowserFragment.OnFragmentInteractionListener,
@@ -138,5 +146,23 @@ public class MainActivity extends AppCompatActivity implements
                 .commit();
 
         mFileBrowserFragment = null;
+    }
+
+    @Override
+    public void playFiles(List<MediaQueueItem> mediaItems) {
+        CastSession castSession =
+                CastContext.getSharedInstance(this).getSessionManager().getCurrentCastSession();
+        if (castSession == null) {
+            Toast.makeText(this, "Not connected", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // For variety, shuffle the list.
+        Collections.shuffle(mediaItems);
+
+        RemoteMediaClient mediaClient = castSession.getRemoteMediaClient();
+        int startIndex = 0;
+        mediaClient.queueLoad(mediaItems.toArray(new MediaQueueItem[0]), startIndex,
+                MediaStatus.REPEAT_MODE_REPEAT_ALL_AND_SHUFFLE, null);
     }
 }
