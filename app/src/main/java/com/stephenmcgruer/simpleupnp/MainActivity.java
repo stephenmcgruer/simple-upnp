@@ -77,6 +77,12 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        getApplicationContext().unbindService(mServiceConnection);
+    }
+
+    @Override
     public void onServerSelected(Device device) {
         if (mServerBrowserFragment == null) {
             throw new IllegalStateException(
