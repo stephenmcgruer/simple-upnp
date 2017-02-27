@@ -13,10 +13,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="?attr/colorPrimary"
-        android:elevation="4dp"
         android:minHeight="?attr/actionBarSize"
-        android:popupTheme="@style/ThemeOverlay.AppCompat.Light"
         android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
+        app:elevation="4dp"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
         app:titleTextColor="@android:color/white" />
 
     <FrameLayout
@@ -27,12 +27,12 @@
 
     <fragment
         android:id="@+id/cast_mini_controller"
-        class="com.google.android.gms.cast.framework.media.widget.MiniControllerFragment"
-        android:layout_width="match_parent"
+        android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:visibility="gone"
         app:castControlButtons="@array/cast_mini_controller_control_buttons"
-        app:castShowImageThumbnail="false" />
+        app:castShowImageThumbnail="false"
+        class="com.google.android.gms.cast.framework.media.widget.MiniControllerFragment" />
 
 </RelativeLayout>

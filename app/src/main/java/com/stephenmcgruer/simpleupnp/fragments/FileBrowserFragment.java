@@ -56,22 +56,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class FileBrowserFragment extends Fragment implements ServiceConnection, AdapterView.OnItemClickListener,
-        FileBrowserAdapter.OnItemClickListener {
+public class FileBrowserFragment extends Fragment implements AdapterView.OnItemClickListener,
+        FileBrowserAdapter.OnItemClickListener, ServiceConnection {
 
     private static final String TAG = "FileBrowserFragment";
 
     private static final String ARGS_UDN = "com.stephenmcgruer.simpleupnp.fragments.ARGS_UDN";
 
     private String mDeviceUdn;
-    private OnFragmentInteractionListener mListener;
+
+    private FileBrowserAdapter mFileBrowserAdapter;
+
     private AndroidUpnpService mUpnpService;
     private Service mContentDirectoryService;
-    private FileBrowserAdapter mFileBrowserAdapter;
+
+    private OnFragmentInteractionListener mListener;
 
     // Should only be accessed on the main thread.
     private Map<String, ContainerWrapper> mContainerMap;
     private ContainerWrapper mCurrentContainer;
+
+    public interface OnFragmentInteractionListener {
+        void onQuitFileBrowsing();
+        void playFiles(List<MediaQueueItem> mediaItems);
+    }
 
     public FileBrowserFragment() {
         // Required empty public constructor.
@@ -115,6 +123,7 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection, 
         Context context = view.getContext();
 
         mFileBrowserAdapter = new FileBrowserAdapter(this, context, R.layout.fragment_file_browser_item);
+        mFileBrowserAdapter.add(new FileBrowserAdapter.ListItem(null, null));
         view.setAdapter(mFileBrowserAdapter);
         view.setOnItemClickListener(this);
 
@@ -223,12 +232,6 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection, 
         mUpnpService.getControlPoint().execute(containerBrowse);
     }
 
-    public interface OnFragmentInteractionListener {
-        void onQuitFileBrowsing();
-
-        void playFiles(List<MediaQueueItem> mediaItems);
-    }
-
     private class SelectContainerBrowse extends Browse {
 
         SelectContainerBrowse(Service service, String containerId, BrowseFlag flag) {
@@ -287,7 +290,6 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection, 
     }
 
     private class CheckForMediaItemsBrowse extends Browse {
-
         private final String mContainerId;
 
         CheckForMediaItemsBrowse(Service service, String containerId, BrowseFlag flag) {
@@ -297,7 +299,7 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection, 
 
         @Override
         public void received(ActionInvocation actionInvocation, final DIDLContent didl) {
-            if (getActivity() == null)
+            if (getActivity() == null || didl.getItems().isEmpty())
                 return;
 
             getActivity().runOnUiThread(new Runnable() {

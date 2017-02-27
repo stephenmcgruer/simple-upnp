@@ -46,10 +46,14 @@ import java.util.Objects;
 public class ServerBrowserFragment extends Fragment implements AdapterView.OnItemClickListener {
 
     private static final String TAG = "ServerBrowserFragment";
+
     private OnFragmentInteractionListener mListener;
+
     private ArrayAdapter<DeviceWrapper> mListAdapter;
+
     private AndroidUpnpService mUpnpService;
     private DeviceRegistryListener mRegistryListener = new DeviceRegistryListener();
+
     private ServiceConnection mServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
@@ -75,6 +79,10 @@ public class ServerBrowserFragment extends Fragment implements AdapterView.OnIte
             mUpnpService = null;
         }
     };
+
+    public interface OnFragmentInteractionListener {
+        void onServerSelected(Device device);
+    }
 
     public ServerBrowserFragment() {
         // Required empty public constructor.
@@ -137,10 +145,6 @@ public class ServerBrowserFragment extends Fragment implements AdapterView.OnIte
     public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
         DeviceWrapper deviceWrapper = (DeviceWrapper) adapterView.getItemAtPosition(position);
         mListener.onServerSelected(deviceWrapper.getDevice());
-    }
-
-    public interface OnFragmentInteractionListener {
-        void onServerSelected(Device device);
     }
 
     /**

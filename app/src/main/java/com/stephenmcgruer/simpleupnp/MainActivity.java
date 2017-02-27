@@ -37,6 +37,8 @@ import com.stephenmcgruer.simpleupnp.fragments.ServerBrowserFragment;
 
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
 import org.fourthline.cling.model.meta.Device;
+import org.fourthline.cling.model.meta.Service;
+import org.fourthline.cling.model.types.UDAServiceType;
 
 import java.util.Collections;
 import java.util.List;
@@ -49,6 +51,7 @@ public class MainActivity extends AppCompatActivity implements
 
     private ServerBrowserFragment mServerBrowserFragment = null;
     private FileBrowserFragment mFileBrowserFragment = null;
+
     private ServiceConnection mServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
@@ -123,6 +126,12 @@ public class MainActivity extends AppCompatActivity implements
         if (mFileBrowserFragment != null) {
             throw new IllegalStateException(
                     "mFileBrowserFragment should be null in onServerSelected");
+        }
+
+        Service service = device.findService(new UDAServiceType("ContentDirectory"));
+        if (service == null) {
+            Toast.makeText(this, "No ContentDirectory service found!", Toast.LENGTH_SHORT).show();
+            return;
         }
 
         mFileBrowserFragment = FileBrowserFragment.newInstance(

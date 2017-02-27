@@ -37,6 +37,10 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem> imple
 
     private final OnItemClickListener mListener;
 
+    interface OnItemClickListener {
+        void playItems(List<Item> items);
+    }
+
     FileBrowserAdapter(OnItemClickListener listener, Context context, int resource) {
         super(context, resource);
         mListener = listener;
@@ -82,16 +86,6 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem> imple
         }
     }
 
-    interface OnItemClickListener {
-        void playItems(List<Item> items);
-    }
-
-    private static class ViewHolder {
-        int position;
-        TextView text;
-        Button button;
-    }
-
     static class ListItem {
         private final ContainerWrapper mContainer;
         private final Item mItem;
@@ -107,14 +101,15 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem> imple
         public boolean equals(Object obj) {
             if (obj instanceof ListItem) {
                 ListItem other = (ListItem) obj;
-                return Objects.equals(mContainer, other.mContainer) && Objects.equals(mItem, other.mItem);
+                return Objects.equals(mContainer, other.mContainer) && Objects.equals(mItem, other.mItem) &&
+                        Objects.equals(mMediaItems, other.mMediaItems);
             }
             return false;
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(mContainer, mItem);
+            return Objects.hash(mContainer, mItem, mMediaItems);
         }
 
         @Override
@@ -153,5 +148,11 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem> imple
         boolean hasMediaItems() {
             return mMediaItems.size() > 0;
         }
+    }
+
+    private static class ViewHolder {
+        int position;
+        TextView text;
+        Button button;
     }
 }

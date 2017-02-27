@@ -14,6 +14,8 @@
 
 package com.stephenmcgruer.simpleupnp.fragments;
 
+import android.support.annotation.NonNull;
+
 import org.fourthline.cling.support.model.container.Container;
 
 class ContainerWrapper {
@@ -23,7 +25,7 @@ class ContainerWrapper {
     private final Container mContainer;
     private final boolean mIsRootContainer;
 
-    ContainerWrapper(Container container) {
+    ContainerWrapper(@NonNull Container container) {
         this(container, false);
     }
 
