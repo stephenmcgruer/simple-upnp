@@ -26,17 +26,32 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
+import android.widget.Toast;
 
 import com.stephenmcgruer.simpleupnp.R;
 
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
+import org.fourthline.cling.model.action.ActionInvocation;
+import org.fourthline.cling.model.message.UpnpResponse;
 import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.meta.Service;
 import org.fourthline.cling.model.types.UDAServiceType;
 import org.fourthline.cling.model.types.UDN;
+import org.fourthline.cling.support.contentdirectory.callback.Browse;
+import org.fourthline.cling.support.model.BrowseFlag;
+import org.fourthline.cling.support.model.DIDLContent;
+import org.fourthline.cling.support.model.container.Container;
+import org.fourthline.cling.support.model.item.Item;
 
-public class FileBrowserFragment extends Fragment implements ServiceConnection {
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+
+public class FileBrowserFragment extends Fragment implements ServiceConnection, AdapterView.OnItemClickListener {
 
     private static final String TAG = "FileBrowserFragment";
 
@@ -46,6 +61,11 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection {
     private OnFragmentInteractionListener mListener;
     private AndroidUpnpService mUpnpService;
     private Service mContentDirectoryService;
+    private ArrayAdapter<FileBrowserListItem> mFileBrowserAdapter;
+
+    // Should only be accessed on the main thread.
+    private Map<String, ContainerWrapper> mContainerMap;
+    private ContainerWrapper mCurrentContainer;
 
     public FileBrowserFragment() {
         // Required empty public constructor.
@@ -67,6 +87,10 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection {
         if (mDeviceUdn == null || mDeviceUdn.isEmpty())
             throw new IllegalStateException("FileBrowserFragment requires a Device UDN");
 
+        mContainerMap = new HashMap<>();
+        mContainerMap.put(ContainerWrapper.ROOT_CONTAINER_ID, ContainerWrapper.ROOT_CONTAINER);
+        mCurrentContainer = ContainerWrapper.ROOT_CONTAINER;
+
         // TODO(smcgruer): Handle failure gracefully.
         if (!getActivity().getApplicationContext().bindService(
                 new Intent(getActivity(), AndroidUpnpServiceImpl.class),
@@ -81,7 +105,14 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection {
     public View onCreateView(LayoutInflater inflater,
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_file_browser, container, false);
+        ListView view = (ListView) inflater.inflate(R.layout.fragment_file_browser, container, false);
+        Context context = view.getContext();
+
+        mFileBrowserAdapter = new ArrayAdapter<>(context, R.layout.fragment_file_browser_item);
+        view.setAdapter(mFileBrowserAdapter);
+        view.setOnItemClickListener(this);
+
+        return view;
     }
 
     @Override
@@ -115,7 +146,7 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection {
                     + mDeviceUdn);
         }
 
-        // TODO(smcgruer): Browse directory + return contents.
+        selectContainer(ContainerWrapper.ROOT_CONTAINER);
     }
 
     @Override
@@ -124,7 +155,138 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection {
         mUpnpService = null;
     }
 
+    @Override
+    public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
+        FileBrowserListItem listItem = (FileBrowserListItem) adapterView.getItemAtPosition(position);
+        if (listItem.isPreviousActionWrapper()) {
+            String parentId = mCurrentContainer.getParentID();
+            if (parentId.isEmpty()) {
+                // We are at the initial root level.
+                if (mListener != null) {
+                    mListener.onQuitFileBrowsing();
+                }
+            } else {
+                // Go back to the parent container.
+                if (!mContainerMap.containsKey(parentId)) {
+                    throw new IllegalStateException(
+                            "Container map does not contain parent container: " + parentId);
+                }
+                selectContainer(mContainerMap.get(parentId));
+            }
+        } else if (listItem.holdsContainer()) {
+            selectContainer(listItem.getContainer());
+        } else {
+            // TODO(smcgruer): Play individual file.
+            Toast.makeText(getActivity(), "Selected file", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void selectContainer(ContainerWrapper container) {
+        mCurrentContainer = container;
+        SelectContainerBrowse containerBrowse = new SelectContainerBrowse(
+                mContentDirectoryService, container.getId(), BrowseFlag.DIRECT_CHILDREN);
+        mUpnpService.getControlPoint().execute(containerBrowse);
+    }
+
     public interface OnFragmentInteractionListener {
-        // TODO(smcgruer): Add methods.
+        void onQuitFileBrowsing();
+    }
+
+    private static class FileBrowserListItem {
+        private final ContainerWrapper mContainer;
+        private final Item mItem;
+
+        FileBrowserListItem(ContainerWrapper container, Item item) {
+            mContainer = container;
+            mItem = item;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj instanceof FileBrowserListItem) {
+                FileBrowserListItem other = (FileBrowserListItem) obj;
+                return Objects.equals(mContainer, other.mContainer) &&
+                        Objects.equals(mItem, other.mItem);
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(mContainer, mItem);
+        }
+
+        @Override
+        public String toString() {
+            if (isPreviousActionWrapper()) {
+                return "...";
+            }
+
+            return holdsContainer() ? mContainer.getTitle() : mItem.getTitle();
+        }
+
+        ContainerWrapper getContainer() {
+            return mContainer;
+        }
+
+        boolean holdsContainer() {
+            return mContainer != null;
+        }
+
+        boolean isPreviousActionWrapper() {
+            return mContainer == null && mItem == null;
+        }
+    }
+
+    private class SelectContainerBrowse extends Browse {
+
+        SelectContainerBrowse(Service service, String containerId, BrowseFlag flag) {
+            super(service, containerId, flag);
+        }
+
+        @Override
+        public void received(ActionInvocation actionInvocation, final DIDLContent didl) {
+            if (getActivity() == null)
+                return;
+
+            getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mFileBrowserAdapter.clear();
+                    mFileBrowserAdapter.add(new FileBrowserListItem(null, null));
+
+                    for (Container container : didl.getContainers()) {
+                        FileBrowserListItem listItem = new FileBrowserListItem(new ContainerWrapper(container), null);
+                        mFileBrowserAdapter.add(listItem);
+                        if (!mContainerMap.containsKey(container.getId())) {
+                            mContainerMap.put(container.getId(), listItem.getContainer());
+                        }
+                    }
+
+                    for (Item item : didl.getItems()) {
+                        mFileBrowserAdapter.add(new FileBrowserListItem(null, item));
+                    }
+                }
+            });
+        }
+
+        @Override
+        public void updateStatus(Status status) {
+            // Do nothing.
+        }
+
+        @Override
+        public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) {
+            if (getActivity() == null)
+                return;
+
+            getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(getActivity(), "Unable to retrieve results", Toast.LENGTH_SHORT)
+                            .show();
+                }
+            });
+        }
     }
 }

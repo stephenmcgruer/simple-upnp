@@ -98,4 +98,25 @@ public class MainActivity extends AppCompatActivity implements
 
         mServerBrowserFragment = null;
     }
+
+    @Override
+    public void onQuitFileBrowsing() {
+        if (mFileBrowserFragment == null) {
+            throw new IllegalStateException(
+                    "mFileBrowserFragment should be non-null in onQuitFileBrowsing");
+        }
+
+        if (mServerBrowserFragment != null) {
+            throw new IllegalStateException(
+                    "mServerBrowserFragment should be null in onQuitFileBrowsing");
+        }
+
+        mServerBrowserFragment = ServerBrowserFragment.newInstance();
+        getSupportFragmentManager().beginTransaction()
+                .remove(mFileBrowserFragment)
+                .add(R.id.fragment_container, mServerBrowserFragment)
+                .commit();
+
+        mFileBrowserFragment = null;
+    }
 }
