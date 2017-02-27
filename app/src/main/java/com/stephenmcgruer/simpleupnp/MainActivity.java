@@ -105,6 +105,15 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     @Override
+    public void onBackPressed() {
+        if (mFileBrowserFragment != null) {
+            mFileBrowserFragment.onBackPressed();
+        } else {
+            super.onBackPressed();
+        }
+    }
+
+    @Override
     public void onServerSelected(Device device) {
         if (mServerBrowserFragment == null) {
             throw new IllegalStateException(

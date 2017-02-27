@@ -165,20 +165,7 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection, 
     public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
         FileBrowserAdapter.ListItem listItem = (FileBrowserAdapter.ListItem) adapterView.getItemAtPosition(position);
         if (listItem.isPreviousActionWrapper()) {
-            String parentId = mCurrentContainer.getParentID();
-            if (parentId.isEmpty()) {
-                // We are at the initial root level.
-                if (mListener != null) {
-                    mListener.onQuitFileBrowsing();
-                }
-            } else {
-                // Go back to the parent container.
-                if (!mContainerMap.containsKey(parentId)) {
-                    throw new IllegalStateException(
-                            "Container map does not contain parent container: " + parentId);
-                }
-                selectContainer(mContainerMap.get(parentId));
-            }
+            onBackPressed();
         } else if (listItem.holdsContainer()) {
             selectContainer(listItem.getContainer());
         } else {
@@ -209,6 +196,23 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection, 
                 mediaItems.add(new MediaQueueItem.Builder(mediaInfo).build());
             }
             mListener.playFiles(mediaItems);
+        }
+    }
+
+    public void onBackPressed() {
+        String parentId = mCurrentContainer.getParentID();
+        if (parentId.isEmpty()) {
+            // We are at the initial root level.
+            if (mListener != null) {
+                mListener.onQuitFileBrowsing();
+            }
+        } else {
+            // Go back to the parent container.
+            if (!mContainerMap.containsKey(parentId)) {
+                throw new IllegalStateException(
+                        "Container map does not contain parent container: " + parentId);
+            }
+            selectContainer(mContainerMap.get(parentId));
         }
     }
 
