@@ -1,3 +1,10 @@
+repositories {
+    mavenCentral()
+    maven {
+        url "http://4thline.org/m2"
+    }
+}
+
 apply plugin: 'com.android.application'
 
 android {
@@ -24,6 +31,15 @@ dependencies {
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
+
+    // Cling
+    compile group: 'org.fourthline.cling', name: 'cling-core', version: '2.1.1'
+    compile group: 'org.fourthline.cling', name: 'cling-support', version: '2.0.1'
+    compile group: 'org.eclipse.jetty', name: 'jetty-server', version: '8.1.18.v20150929'
+    compile group: 'org.eclipse.jetty', name: 'jetty-servlet', version: '8.1.18.v20150929'
+    compile group: 'org.eclipse.jetty', name: 'jetty-client', version: '8.1.18.v20150929'
+    compile group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.7.14'
+
     compile 'com.android.support:appcompat-v7:25.1.1'
     testCompile 'junit:junit:4.12'
 }
