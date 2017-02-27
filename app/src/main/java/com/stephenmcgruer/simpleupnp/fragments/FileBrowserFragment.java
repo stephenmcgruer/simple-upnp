@@ -27,7 +27,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -57,7 +56,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class FileBrowserFragment extends Fragment implements ServiceConnection, AdapterView.OnItemClickListener {
+public class FileBrowserFragment extends Fragment implements ServiceConnection, AdapterView.OnItemClickListener,
+        FileBrowserAdapter.OnItemClickListener {
 
     private static final String TAG = "FileBrowserFragment";
 
@@ -67,7 +67,7 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection, 
     private OnFragmentInteractionListener mListener;
     private AndroidUpnpService mUpnpService;
     private Service mContentDirectoryService;
-    private ArrayAdapter<FileBrowserListItem> mFileBrowserAdapter;
+    private FileBrowserAdapter mFileBrowserAdapter;
 
     // Should only be accessed on the main thread.
     private Map<String, ContainerWrapper> mContainerMap;
@@ -114,7 +114,7 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection, 
         ListView view = (ListView) inflater.inflate(R.layout.fragment_file_browser, container, false);
         Context context = view.getContext();
 
-        mFileBrowserAdapter = new ArrayAdapter<>(context, R.layout.fragment_file_browser_item);
+        mFileBrowserAdapter = new FileBrowserAdapter(this, context, R.layout.fragment_file_browser_item);
         view.setAdapter(mFileBrowserAdapter);
         view.setOnItemClickListener(this);
 
@@ -163,7 +163,7 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection, 
 
     @Override
     public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
-        FileBrowserListItem listItem = (FileBrowserListItem) adapterView.getItemAtPosition(position);
+        FileBrowserAdapter.ListItem listItem = (FileBrowserAdapter.ListItem) adapterView.getItemAtPosition(position);
         if (listItem.isPreviousActionWrapper()) {
             String parentId = mCurrentContainer.getParentID();
             if (parentId.isEmpty()) {
@@ -188,7 +188,8 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection, 
         }
     }
 
-    private void playItems(List<Item> itemsToPlay) {
+    @Override
+    public void playItems(List<Item> itemsToPlay) {
         if (mListener == null)
             return;
 
@@ -224,56 +225,6 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection, 
         void playFiles(List<MediaQueueItem> mediaItems);
     }
 
-    private static class FileBrowserListItem {
-        private final ContainerWrapper mContainer;
-        private final Item mItem;
-
-        FileBrowserListItem(ContainerWrapper container, Item item) {
-            mContainer = container;
-            mItem = item;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj instanceof FileBrowserListItem) {
-                FileBrowserListItem other = (FileBrowserListItem) obj;
-                return Objects.equals(mContainer, other.mContainer) &&
-                        Objects.equals(mItem, other.mItem);
-            }
-            return false;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(mContainer, mItem);
-        }
-
-        @Override
-        public String toString() {
-            if (isPreviousActionWrapper()) {
-                return "...";
-            }
-
-            return holdsContainer() ? mContainer.getTitle() : mItem.getTitle();
-        }
-
-        ContainerWrapper getContainer() {
-            return mContainer;
-        }
-
-        Item getItem() {
-            return mItem;
-        }
-
-        boolean holdsContainer() {
-            return mContainer != null;
-        }
-
-        boolean isPreviousActionWrapper() {
-            return mContainer == null && mItem == null;
-        }
-    }
-
     private class SelectContainerBrowse extends Browse {
 
         SelectContainerBrowse(Service service, String containerId, BrowseFlag flag) {
@@ -289,18 +240,23 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection, 
                 @Override
                 public void run() {
                     mFileBrowserAdapter.clear();
-                    mFileBrowserAdapter.add(new FileBrowserListItem(null, null));
+                    mFileBrowserAdapter.add(new FileBrowserAdapter.ListItem(null, null));
 
                     for (Container container : didl.getContainers()) {
-                        FileBrowserListItem listItem = new FileBrowserListItem(new ContainerWrapper(container), null);
+                        FileBrowserAdapter.ListItem listItem = new FileBrowserAdapter.ListItem(
+                                new ContainerWrapper(container), null);
                         mFileBrowserAdapter.add(listItem);
                         if (!mContainerMap.containsKey(container.getId())) {
                             mContainerMap.put(container.getId(), listItem.getContainer());
                         }
+
+                        CheckForMediaItemsBrowse mediaItemsBrowse = new CheckForMediaItemsBrowse(
+                                mContentDirectoryService, container.getId(), BrowseFlag.DIRECT_CHILDREN);
+                        mUpnpService.getControlPoint().execute(mediaItemsBrowse);
                     }
 
                     for (Item item : didl.getItems()) {
-                        mFileBrowserAdapter.add(new FileBrowserListItem(null, item));
+                        mFileBrowserAdapter.add(new FileBrowserAdapter.ListItem(null, item));
                     }
                 }
             });
@@ -323,6 +279,46 @@ public class FileBrowserFragment extends Fragment implements ServiceConnection, 
                             .show();
                 }
             });
+        }
+    }
+
+    private class CheckForMediaItemsBrowse extends Browse {
+
+        private final String mContainerId;
+
+        CheckForMediaItemsBrowse(Service service, String containerId, BrowseFlag flag) {
+            super(service, containerId, flag);
+            mContainerId = containerId;
+        }
+
+        @Override
+        public void received(ActionInvocation actionInvocation, final DIDLContent didl) {
+            if (getActivity() == null)
+                return;
+
+            getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    for (int i = 0; i < mFileBrowserAdapter.getCount(); i++) {
+                        FileBrowserAdapter.ListItem listItem = mFileBrowserAdapter.getItem(i);
+                        if (listItem != null && listItem.holdsContainer() &&
+                                Objects.equals(listItem.getContainer().getId(), mContainerId)) {
+                            listItem.setMediaItems(didl.getItems());
+                            mFileBrowserAdapter.notifyDataSetChanged();
+                        }
+                    }
+                }
+            });
+        }
+
+        @Override
+        public void updateStatus(Status status) {
+            // Do nothing.
+        }
+
+        @Override
+        public void failure(ActionInvocation invocation, UpnpResponse operation, String defaultMsg) {
+            // Do nothing.
         }
     }
 }
