@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">SimpleUPnP</string>
+    <string name="cast_app_id">E1999E97</string>
+    <string name="media_route_menu_item_title">Cast</string>
 </resources>

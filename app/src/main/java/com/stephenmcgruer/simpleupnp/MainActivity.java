@@ -23,7 +23,10 @@ import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.Menu;
 
+import com.google.android.gms.cast.framework.CastButtonFactory;
+import com.google.android.gms.cast.framework.CastContext;
 import com.stephenmcgruer.simpleupnp.fragments.FileBrowserFragment;
 import com.stephenmcgruer.simpleupnp.fragments.ServerBrowserFragment;
 
@@ -57,6 +60,10 @@ public class MainActivity extends AppCompatActivity implements
 
         setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
 
+        // Make the Cast button show.
+        // TODO(smcgruer): Determine if there is a more correct way to do this.
+        CastContext.getSharedInstance(this);
+
         // Bind the UPnP service. This is not actually used in MainActivity, but is used by multiple child fragments.
         // Binding it here means that it will not be destroyed and recreated during fragment transitions.
         // TODO(smcgruer): Handle failure gracefully.
@@ -80,6 +87,13 @@ public class MainActivity extends AppCompatActivity implements
     protected void onDestroy() {
         super.onDestroy();
         getApplicationContext().unbindService(mServiceConnection);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        CastButtonFactory.setUpMediaRouteButton(getApplicationContext(), menu, R.id.media_route_menu_item);
+        return true;
     }
 
     @Override
