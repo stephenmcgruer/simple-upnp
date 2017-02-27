@@ -14,14 +14,37 @@
 
 package com.stephenmcgruer.simpleupnp;
 
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 
-public class MainActivity extends AppCompatActivity {
+import com.stephenmcgruer.simpleupnp.fragments.ServerBrowserFragment;
+
+import org.fourthline.cling.model.meta.Device;
+
+public class MainActivity extends AppCompatActivity implements ServerBrowserFragment.OnFragmentInteractionListener {
+
+    private static final String TAG = "MainActivity";
+
+    private ServerBrowserFragment mServerBrowserFragment = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        if (mServerBrowserFragment != null)
+            throw new IllegalStateException("mServerBrowserFragment should be null in onCreate");
+
+        mServerBrowserFragment = ServerBrowserFragment.newInstance();
+        getSupportFragmentManager().beginTransaction()
+                .add(R.id.fragment_container, mServerBrowserFragment)
+                .commit();
+    }
+
+    @Override
+    public void onServerSelected(Device device) {
+        // TODO(smcgruer): Implement.
+        Log.d(TAG, "onServerSelected: " + device.toString());
     }
 }
