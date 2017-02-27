@@ -16,6 +16,7 @@ package com.stephenmcgruer.simpleupnp;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
 
 import com.stephenmcgruer.simpleupnp.fragments.ServerBrowserFragment;
@@ -32,6 +33,8 @@ public class MainActivity extends AppCompatActivity implements ServerBrowserFrag
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        setSupportActionBar((Toolbar) findViewById(R.id.toolbar));
 
         if (mServerBrowserFragment != null)
             throw new IllegalStateException("mServerBrowserFragment should be null in onCreate");
