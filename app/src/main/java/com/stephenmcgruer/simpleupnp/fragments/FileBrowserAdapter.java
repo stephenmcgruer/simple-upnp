@@ -37,10 +37,6 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem> imple
 
     private final OnItemClickListener mListener;
 
-    interface OnItemClickListener {
-        void playItems(List<Item> items);
-    }
-
     FileBrowserAdapter(OnItemClickListener listener, Context context, int resource) {
         super(context, resource);
         mListener = listener;
@@ -86,12 +82,26 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem> imple
         }
     }
 
+    interface OnItemClickListener {
+        void playItems(List<Item> items);
+    }
+
     static class ListItem {
+        static final ListItem PREVIOUS_CONTAINER_LIST_ITEM = new ListItem(null, null);
+
         private final ContainerWrapper mContainer;
         private final Item mItem;
         private List<Item> mMediaItems;
 
-        ListItem(ContainerWrapper container, Item item) {
+        ListItem(@NonNull ContainerWrapper container) {
+            this(container, null);
+        }
+
+        ListItem(@NonNull Item item) {
+            this(null, item);
+        }
+
+        private ListItem(ContainerWrapper container, Item item) {
             mContainer = container;
             mItem = item;
             mMediaItems = new ArrayList<>();
@@ -114,7 +124,7 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem> imple
 
         @Override
         public String toString() {
-            if (isPreviousActionWrapper()) {
+            if (isPreviousContainerListItem()) {
                 return "...";
             }
 
@@ -141,7 +151,7 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem> imple
             return mContainer != null;
         }
 
-        boolean isPreviousActionWrapper() {
+        boolean isPreviousContainerListItem() {
             return mContainer == null && mItem == null;
         }
 

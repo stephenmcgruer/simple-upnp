@@ -76,11 +76,6 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
     private Map<String, ContainerWrapper> mContainerMap;
     private ContainerWrapper mCurrentContainer;
 
-    public interface OnFragmentInteractionListener {
-        void onQuitFileBrowsing();
-        void playFiles(List<MediaQueueItem> mediaItems);
-    }
-
     public FileBrowserFragment() {
         // Required empty public constructor.
     }
@@ -123,7 +118,7 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
         Context context = view.getContext();
 
         mFileBrowserAdapter = new FileBrowserAdapter(this, context, R.layout.fragment_file_browser_item);
-        mFileBrowserAdapter.add(new FileBrowserAdapter.ListItem(null, null));
+        mFileBrowserAdapter.add(FileBrowserAdapter.ListItem.PREVIOUS_CONTAINER_LIST_ITEM);
         view.setAdapter(mFileBrowserAdapter);
         view.setOnItemClickListener(this);
 
@@ -173,7 +168,7 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
     @Override
     public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
         FileBrowserAdapter.ListItem listItem = (FileBrowserAdapter.ListItem) adapterView.getItemAtPosition(position);
-        if (listItem.isPreviousActionWrapper()) {
+        if (listItem.isPreviousContainerListItem()) {
             onBackPressed();
         } else if (listItem.holdsContainer()) {
             selectContainer(listItem.getContainer());
@@ -232,6 +227,12 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
         mUpnpService.getControlPoint().execute(containerBrowse);
     }
 
+    public interface OnFragmentInteractionListener {
+        void onQuitFileBrowsing();
+
+        void playFiles(List<MediaQueueItem> mediaItems);
+    }
+
     private class SelectContainerBrowse extends Browse {
 
         SelectContainerBrowse(Service service, String containerId, BrowseFlag flag) {
@@ -247,11 +248,11 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
                 @Override
                 public void run() {
                     mFileBrowserAdapter.clear();
-                    mFileBrowserAdapter.add(new FileBrowserAdapter.ListItem(null, null));
+                    mFileBrowserAdapter.add(FileBrowserAdapter.ListItem.PREVIOUS_CONTAINER_LIST_ITEM);
 
                     for (Container container : didl.getContainers()) {
                         FileBrowserAdapter.ListItem listItem = new FileBrowserAdapter.ListItem(
-                                new ContainerWrapper(container), null);
+                                new ContainerWrapper(container));
                         mFileBrowserAdapter.add(listItem);
                         if (!mContainerMap.containsKey(container.getId())) {
                             mContainerMap.put(container.getId(), listItem.getContainer());
@@ -263,7 +264,7 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
                     }
 
                     for (Item item : didl.getItems()) {
-                        mFileBrowserAdapter.add(new FileBrowserAdapter.ListItem(null, item));
+                        mFileBrowserAdapter.add(new FileBrowserAdapter.ListItem(item));
                     }
                 }
             });
