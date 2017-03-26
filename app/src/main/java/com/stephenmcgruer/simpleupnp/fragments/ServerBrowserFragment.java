@@ -29,6 +29,7 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.RelativeLayout;
 
 import com.stephenmcgruer.simpleupnp.R;
 import com.stephenmcgruer.simpleupnp.cling.DeviceRegistryListener;
@@ -106,13 +107,14 @@ public class ServerBrowserFragment extends Fragment implements AdapterView.OnIte
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        ListView listView = (ListView) inflater.inflate(R.layout.fragment_server_browser, container, false);
+        RelativeLayout relativeLayoutView = (RelativeLayout)  inflater.inflate(R.layout.fragment_server_browser, container, false);
 
+        ListView listView = (ListView) relativeLayoutView.findViewById(R.id.server_browser_list);
         mListAdapter = new ArrayAdapter<>(listView.getContext(), R.layout.fragment_server_browser_item);
         listView.setAdapter(mListAdapter);
         listView.setOnItemClickListener(this);
 
-        return listView;
+        return relativeLayoutView;
     }
 
     @Override
