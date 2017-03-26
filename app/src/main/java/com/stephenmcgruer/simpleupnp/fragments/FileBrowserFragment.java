@@ -199,8 +199,8 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
                         .build();
                 mediaItems.add(new MediaQueueItem.Builder(mediaInfo).build());
             }
-            mListener.playFiles(mediaItems);
         }
+        mListener.playFiles(mediaItems);
     }
 
     public void onBackPressed() {

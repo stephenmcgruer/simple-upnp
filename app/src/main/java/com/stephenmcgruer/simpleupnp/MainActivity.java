@@ -178,6 +178,7 @@ public class MainActivity extends AppCompatActivity implements
         // For variety, shuffle the list.
         Collections.shuffle(mediaItems);
 
+        Log.d(TAG, "playFiles: sending " + mediaItems.size() + " files to Chromecast");
         RemoteMediaClient mediaClient = castSession.getRemoteMediaClient();
         int startIndex = 0;
         mediaClient.queueLoad(mediaItems.toArray(new MediaQueueItem[0]), startIndex,
