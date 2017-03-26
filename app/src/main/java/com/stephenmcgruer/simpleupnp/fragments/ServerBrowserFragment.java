@@ -31,19 +31,16 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
 import com.stephenmcgruer.simpleupnp.R;
+import com.stephenmcgruer.simpleupnp.cling.DeviceRegistryListener;
 
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
 import org.fourthline.cling.model.meta.Device;
-import org.fourthline.cling.model.meta.LocalDevice;
-import org.fourthline.cling.model.meta.RemoteDevice;
-import org.fourthline.cling.model.types.UDAServiceType;
-import org.fourthline.cling.registry.DefaultRegistryListener;
-import org.fourthline.cling.registry.Registry;
 
 import java.util.Objects;
 
-public class ServerBrowserFragment extends Fragment implements AdapterView.OnItemClickListener {
+public class ServerBrowserFragment extends Fragment implements AdapterView.OnItemClickListener,
+        DeviceRegistryListener.DeviceChangeHandler {
 
     private static final String TAG = "ServerBrowserFragment";
 
@@ -52,7 +49,7 @@ public class ServerBrowserFragment extends Fragment implements AdapterView.OnIte
     private ArrayAdapter<DeviceWrapper> mListAdapter;
 
     private AndroidUpnpService mUpnpService;
-    private DeviceRegistryListener mRegistryListener = new DeviceRegistryListener();
+    private DeviceRegistryListener mRegistryListener = new DeviceRegistryListener(this, this);
 
     private ServiceConnection mServiceConnection = new ServiceConnection() {
         @Override
@@ -66,7 +63,7 @@ public class ServerBrowserFragment extends Fragment implements AdapterView.OnIte
 
             // Add any already-cached devices.
             for (Device device : mUpnpService.getRegistry().getDevices()) {
-                mRegistryListener.deviceAdded(device);
+                onDeviceAdded(device);
             }
 
             // Kick off a search for all devices on the network.
@@ -147,6 +144,27 @@ public class ServerBrowserFragment extends Fragment implements AdapterView.OnIte
         mListener.onServerSelected(deviceWrapper.getDevice());
     }
 
+    @Override
+    public void onDeviceAdded(Device device) {
+        DeviceWrapper wrapper = new DeviceWrapper(device);
+        int position = mListAdapter.getPosition(wrapper);
+        if (position >= 0) {
+            mListAdapter.remove(wrapper);
+            mListAdapter.insert(wrapper, position);
+        } else {
+            mListAdapter.add(wrapper);
+        }
+        mListAdapter.sort(new DeviceWrapper.Comparator());
+        mListAdapter.notifyDataSetChanged();
+    }
+
+    @Override
+    public void onDeviceRemoved(Device device) {
+        mListAdapter.remove(new DeviceWrapper(device));
+        mListAdapter.sort(new DeviceWrapper.Comparator());
+        mListAdapter.notifyDataSetChanged();
+    }
+
     /**
      * Simple wrapper of a @link{Device} for the list @link{ArrayAdapter}.
      */
@@ -188,87 +206,6 @@ public class ServerBrowserFragment extends Fragment implements AdapterView.OnIte
             public int compare(DeviceWrapper o1, DeviceWrapper o2) {
                 return o1.toString().compareTo(o2.toString());
             }
-        }
-    }
-
-    private class DeviceRegistryListener extends DefaultRegistryListener {
-
-        /**
-         * Handle adding a new device, either local or remote.
-         *
-         * @param device The device to be added
-         */
-        void deviceAdded(final Device device) {
-            if (getActivity() == null)
-                return;
-
-            // We only care about devices that provide a ContentDirectory.
-            if (device.findService(new UDAServiceType("ContentDirectory")) == null)
-                return;
-
-            getActivity().runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    DeviceWrapper wrapper = new DeviceWrapper(device);
-                    int position = mListAdapter.getPosition(wrapper);
-                    if (position >= 0) {
-                        mListAdapter.remove(wrapper);
-                        mListAdapter.insert(wrapper, position);
-                    } else {
-                        mListAdapter.add(wrapper);
-                    }
-                    mListAdapter.sort(new DeviceWrapper.Comparator());
-                    mListAdapter.notifyDataSetChanged();
-                }
-            });
-        }
-
-        /**
-         * Handle removing a device, either local or remote.
-         *
-         * @param device The device to be removed.
-         */
-        private void deviceRemoved(final Device device) {
-            if (getActivity() != null) {
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        mListAdapter.remove(new DeviceWrapper(device));
-                        mListAdapter.sort(new DeviceWrapper.Comparator());
-                        mListAdapter.notifyDataSetChanged();
-                    }
-                });
-            }
-        }
-
-        @Override
-        public void remoteDeviceDiscoveryStarted(Registry registry, RemoteDevice device) {
-            deviceAdded(device);
-        }
-
-        @Override
-        public void remoteDeviceDiscoveryFailed(Registry registry, RemoteDevice device, Exception ex) {
-            deviceRemoved(device);
-        }
-
-        @Override
-        public void remoteDeviceAdded(Registry registry, RemoteDevice device) {
-            deviceAdded(device);
-        }
-
-        @Override
-        public void remoteDeviceRemoved(Registry registry, RemoteDevice device) {
-            deviceRemoved(device);
-        }
-
-        @Override
-        public void localDeviceAdded(Registry registry, LocalDevice device) {
-            deviceAdded(device);
-        }
-
-        @Override
-        public void localDeviceRemoved(Registry registry, LocalDevice device) {
-            deviceRemoved(device);
         }
     }
 }
