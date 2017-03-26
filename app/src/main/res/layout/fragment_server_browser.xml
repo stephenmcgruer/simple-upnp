@@ -5,5 +5,7 @@
     android:name="com.stephenmcgruer.simpleupnp.fragments.ServerBrowserFragment"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:paddingBottom="96dp"
+    android:clipToPadding="false"
     tools:context="com.stephenmcgruer.simpleupnp.fragments.ServerBrowserFragment"
     tools:listitem="@layout/fragment_server_browser_item" />
