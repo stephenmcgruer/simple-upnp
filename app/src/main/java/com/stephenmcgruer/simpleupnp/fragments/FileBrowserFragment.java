@@ -22,8 +22,10 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v7.widget.PopupMenu;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -57,11 +59,15 @@ import java.util.Map;
 import java.util.Objects;
 
 public class FileBrowserFragment extends Fragment implements AdapterView.OnItemClickListener,
-        FileBrowserAdapter.OnItemClickListener, ServiceConnection {
+        FileBrowserAdapter.OnItemClickListener, ServiceConnection, AdapterView.OnItemLongClickListener {
 
     private static final String TAG = "FileBrowserFragment";
 
     private static final String ARGS_UDN = "com.stephenmcgruer.simpleupnp.fragments.ARGS_UDN";
+    private static final String ARGS_INITIAL_CONTAINER_ID =
+            "com.stephenmcgruer.simpleupnp.fragments.ARGS_INITIAL_CONTAINER_ID";
+
+    private static final String BOOKMARK_PARENT_ID = "-1";
 
     private String mDeviceUdn;
 
@@ -80,10 +86,12 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
         // Required empty public constructor.
     }
 
-    public static FileBrowserFragment newInstance(String deviceUdn) {
+    public static FileBrowserFragment newInstance(String deviceUdn, String initialContainerId) {
         FileBrowserFragment fragment = new FileBrowserFragment();
         Bundle args = new Bundle();
         args.putString(ARGS_UDN, deviceUdn);
+        Log.d(TAG, "newInstance: putting ARGS_INITIAL_CONTAINER_ID as " + initialContainerId);
+        args.putString(ARGS_INITIAL_CONTAINER_ID, initialContainerId);
         fragment.setArguments(args);
         return fragment;
     }
@@ -99,6 +107,12 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
         mContainerMap = new HashMap<>();
         mContainerMap.put(ContainerWrapper.ROOT_CONTAINER_ID, ContainerWrapper.ROOT_CONTAINER);
         mCurrentContainer = ContainerWrapper.ROOT_CONTAINER;
+
+        if (getArguments().getString(ARGS_INITIAL_CONTAINER_ID) != null) {
+            ContainerWrapper wrapper = new ContainerWrapper("Test", getArguments().getString(ARGS_INITIAL_CONTAINER_ID), BOOKMARK_PARENT_ID);
+            mContainerMap.put(wrapper.getId(), wrapper);
+            mCurrentContainer = wrapper;
+        }
 
         // TODO(smcgruer): Handle failure gracefully.
         if (!getActivity().getApplicationContext().bindService(
@@ -121,7 +135,7 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
         mFileBrowserAdapter.add(FileBrowserAdapter.ListItem.PREVIOUS_CONTAINER_LIST_ITEM);
         view.setAdapter(mFileBrowserAdapter);
         view.setOnItemClickListener(this);
-
+        view.setOnItemLongClickListener(this);
         return view;
     }
 
@@ -156,7 +170,7 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
                     + mDeviceUdn);
         }
 
-        selectContainer(ContainerWrapper.ROOT_CONTAINER);
+        selectContainer(mCurrentContainer);
     }
 
     @Override
@@ -177,6 +191,30 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
             items.add(listItem.getItem());
             playItems(items);
         }
+    }
+
+    @Override
+    public boolean onItemLongClick(AdapterView<?> adapterView, View view, int position, long id) {
+        final FileBrowserAdapter.ListItem listItem = (FileBrowserAdapter.ListItem) adapterView.getItemAtPosition(position);
+        if (listItem.isPreviousContainerListItem() || !listItem.holdsContainer()) {
+            return false;
+        }
+
+        PopupMenu popup = new PopupMenu(getActivity(), view);
+        popup.getMenuInflater().inflate(R.menu.menu_file_list_item, popup.getMenu());
+        popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                if (item.getItemId() == R.id.mi_add_bookmark) {
+                    mListener.addBookmark(
+                            mDeviceUdn, listItem.getContainer().getTitle(), listItem.getContainer().getId());
+                }
+                return false;
+            }
+        });
+        popup.show();
+
+        return true;
     }
 
     @Override
@@ -205,7 +243,7 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
 
     public void onBackPressed() {
         String parentId = mCurrentContainer.getParentID();
-        if (parentId.isEmpty()) {
+        if (parentId.isEmpty() || parentId.equals(BOOKMARK_PARENT_ID)) {
             // We are at the initial root level.
             if (mListener != null) {
                 mListener.onQuitFileBrowsing();
@@ -229,8 +267,8 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
 
     public interface OnFragmentInteractionListener {
         void onQuitFileBrowsing();
-
         void playFiles(List<MediaQueueItem> mediaItems);
+        void addBookmark(String udn, String containerTitle, String containerId);
     }
 
     private class SelectContainerBrowse extends Browse {

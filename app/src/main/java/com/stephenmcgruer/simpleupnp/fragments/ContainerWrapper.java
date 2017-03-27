@@ -20,31 +20,39 @@ import org.fourthline.cling.support.model.container.Container;
 
 class ContainerWrapper {
     static final String ROOT_CONTAINER_ID = "0";
-    static final ContainerWrapper ROOT_CONTAINER = new ContainerWrapper(null, true);
+    static final ContainerWrapper ROOT_CONTAINER = new ContainerWrapper(null, ROOT_CONTAINER_ID, "", true);
 
-    private final Container mContainer;
+    private final String mTitle;
+    private final String mId;
+    private final String mParentId;
     private final boolean mIsRootContainer;
 
     ContainerWrapper(@NonNull Container container) {
-        this(container, false);
+        this(container.getTitle(), container.getId(), container.getParentID(), false);
     }
 
-    private ContainerWrapper(Container container, boolean isRootContainer) {
-        mContainer = container;
+    ContainerWrapper(String title, String id, String parentId) {
+        this(title, id, parentId, false);
+    }
+
+    private ContainerWrapper(String title, String id, String parentId, boolean isRootContainer) {
+        mTitle = title;
+        mId = id;
+        mParentId = parentId;
         mIsRootContainer = isRootContainer;
     }
 
     String getId() {
-        return mIsRootContainer ? ROOT_CONTAINER_ID : mContainer.getId();
+        return mId;
     }
 
     String getParentID() {
-        return mIsRootContainer ? "" : mContainer.getParentID();
+        return mParentId;
     }
 
     String getTitle() {
         if (mIsRootContainer)
             throw new UnsupportedOperationException("The root container does not have a title");
-        return mContainer.getTitle();
+        return mTitle;
     }
 }

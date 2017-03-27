@@ -33,11 +33,15 @@ import android.widget.RelativeLayout;
 
 import com.stephenmcgruer.simpleupnp.R;
 import com.stephenmcgruer.simpleupnp.cling.DeviceRegistryListener;
+import com.stephenmcgruer.simpleupnp.database.BookmarksContract.Bookmark;
 
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
 import org.fourthline.cling.model.meta.Device;
+import org.fourthline.cling.model.types.UDAServiceType;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public class ServerBrowserFragment extends Fragment implements AdapterView.OnItemClickListener,
@@ -47,18 +51,20 @@ public class ServerBrowserFragment extends Fragment implements AdapterView.OnIte
 
     private OnFragmentInteractionListener mListener;
 
-    private ArrayAdapter<DeviceWrapper> mListAdapter;
+    private ArrayAdapter<DeviceWrapper> mServerListAdapter;
+    private ArrayAdapter<BookmarkWrapper> mBookmarkListAdapter;
+
 
     private AndroidUpnpService mUpnpService;
-    private DeviceRegistryListener mRegistryListener = new DeviceRegistryListener(this, this);
+    private final DeviceRegistryListener mRegistryListener = new DeviceRegistryListener(this, this);
 
-    private ServiceConnection mServiceConnection = new ServiceConnection() {
+    private final ServiceConnection mServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             Log.d(TAG, "onServiceConnected: " + name.flattenToShortString() + ", " + service.toString());
             mUpnpService = (AndroidUpnpService) service;
 
-            mListAdapter.clear();
+            mServerListAdapter.clear();
 
             mUpnpService.getRegistry().addListener(mRegistryListener);
 
@@ -80,6 +86,8 @@ public class ServerBrowserFragment extends Fragment implements AdapterView.OnIte
 
     public interface OnFragmentInteractionListener {
         void onServerSelected(Device device);
+        void requestBookmarksForDevice(Device device);
+        void onBookmarkSelected(Bookmark bookmark);
     }
 
     public ServerBrowserFragment() {
@@ -109,10 +117,17 @@ public class ServerBrowserFragment extends Fragment implements AdapterView.OnIte
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         RelativeLayout relativeLayoutView = (RelativeLayout)  inflater.inflate(R.layout.fragment_server_browser, container, false);
 
-        ListView listView = (ListView) relativeLayoutView.findViewById(R.id.server_browser_list);
-        mListAdapter = new ArrayAdapter<>(listView.getContext(), R.layout.fragment_server_browser_item);
-        listView.setAdapter(mListAdapter);
-        listView.setOnItemClickListener(this);
+        ListView serverListView = (ListView) relativeLayoutView.findViewById(R.id.server_browser_list);
+        mServerListAdapter =
+                new ArrayAdapter<>(serverListView.getContext(), R.layout.fragment_server_browser_item);
+        serverListView.setAdapter(mServerListAdapter);
+        serverListView.setOnItemClickListener(this);
+
+        ListView bookmarkListView = (ListView) relativeLayoutView.findViewById(R.id.bookmarks_list);
+        mBookmarkListAdapter =
+                new ArrayAdapter<>(bookmarkListView.getContext(), R.layout.fragment_server_browser_item);
+        bookmarkListView.setAdapter(mBookmarkListAdapter);
+        bookmarkListView.setOnItemClickListener(this);
 
         return relativeLayoutView;
     }
@@ -142,29 +157,72 @@ public class ServerBrowserFragment extends Fragment implements AdapterView.OnIte
 
     @Override
     public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
-        DeviceWrapper deviceWrapper = (DeviceWrapper) adapterView.getItemAtPosition(position);
-        mListener.onServerSelected(deviceWrapper.getDevice());
+        switch (adapterView.getId()) {
+            case R.id.server_browser_list:
+                DeviceWrapper deviceWrapper = (DeviceWrapper) adapterView.getItemAtPosition(position);
+                mListener.onServerSelected(deviceWrapper.getDevice());
+                break;
+            case R.id.bookmarks_list:
+                BookmarkWrapper bookmarkWrapper = (BookmarkWrapper) adapterView.getItemAtPosition(position);
+                mListener.onBookmarkSelected(bookmarkWrapper.getBookmark());
+                break;
+        }
     }
 
     @Override
     public void onDeviceAdded(Device device) {
+        if (device.findService(new UDAServiceType("ContentDirectory")) == null)
+            return;
+
         DeviceWrapper wrapper = new DeviceWrapper(device);
-        int position = mListAdapter.getPosition(wrapper);
+        int position = mServerListAdapter.getPosition(wrapper);
         if (position >= 0) {
-            mListAdapter.remove(wrapper);
-            mListAdapter.insert(wrapper, position);
+            mServerListAdapter.remove(wrapper);
+            mServerListAdapter.insert(wrapper, position);
         } else {
-            mListAdapter.add(wrapper);
+            mServerListAdapter.add(wrapper);
         }
-        mListAdapter.sort(new DeviceWrapper.Comparator());
-        mListAdapter.notifyDataSetChanged();
+        mServerListAdapter.sort(new DeviceWrapper.Comparator());
+        mServerListAdapter.notifyDataSetChanged();
+
+        mListener.requestBookmarksForDevice(device);
     }
 
     @Override
     public void onDeviceRemoved(Device device) {
-        mListAdapter.remove(new DeviceWrapper(device));
-        mListAdapter.sort(new DeviceWrapper.Comparator());
-        mListAdapter.notifyDataSetChanged();
+        mServerListAdapter.remove(new DeviceWrapper(device));
+        mServerListAdapter.sort(new DeviceWrapper.Comparator());
+        mServerListAdapter.notifyDataSetChanged();
+
+        // Remove any related bookmarks.
+        String udn = device.getIdentity().getUdn().getIdentifierString();
+        List<BookmarkWrapper> toRemove = new ArrayList<>();
+        for (int i = 0; i < mBookmarkListAdapter.getCount(); i++) {
+            BookmarkWrapper wrapper = mBookmarkListAdapter.getItem(i);
+            if (wrapper.getBookmark().getUdn().equals(udn)) {
+                toRemove.add(wrapper);
+            }
+        }
+        if (toRemove.isEmpty())
+            return;
+
+        for (BookmarkWrapper wrapper : toRemove) {
+            mBookmarkListAdapter.remove(wrapper);
+        }
+        mBookmarkListAdapter.notifyDataSetChanged();
+    }
+
+    public void addBookmarks(List<Bookmark> bookmarks) {
+        if (bookmarks.isEmpty())
+            return;
+
+        for (Bookmark bookmark : bookmarks) {
+            BookmarkWrapper wrapper = new BookmarkWrapper(bookmark);
+            if (mBookmarkListAdapter.getPosition(wrapper) < 0) {
+                mBookmarkListAdapter.add(wrapper);
+            }
+        }
+        mBookmarkListAdapter.notifyDataSetChanged();
     }
 
     /**
@@ -208,6 +266,37 @@ public class ServerBrowserFragment extends Fragment implements AdapterView.OnIte
             public int compare(DeviceWrapper o1, DeviceWrapper o2) {
                 return o1.toString().compareTo(o2.toString());
             }
+        }
+    }
+
+    private static class BookmarkWrapper {
+        private final Bookmark mBookmark;
+
+        public BookmarkWrapper(Bookmark bookmark) {
+            mBookmark = bookmark;
+        }
+
+        Bookmark getBookmark() {
+            return mBookmark;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj instanceof BookmarkWrapper) {
+                BookmarkWrapper other = (BookmarkWrapper) obj;
+                return Objects.equals(mBookmark, other.mBookmark);
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(mBookmark);
+        }
+
+        @Override
+        public String toString() {
+            return mBookmark.getContainerName() + " (" + mBookmark.getUdn() + ")";
         }
     }
 }

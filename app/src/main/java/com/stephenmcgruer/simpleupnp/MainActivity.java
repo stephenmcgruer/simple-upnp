@@ -32,6 +32,10 @@ import com.google.android.gms.cast.framework.CastButtonFactory;
 import com.google.android.gms.cast.framework.CastContext;
 import com.google.android.gms.cast.framework.CastSession;
 import com.google.android.gms.cast.framework.media.RemoteMediaClient;
+import com.stephenmcgruer.simpleupnp.database.BookmarksContract.Bookmark;
+import com.stephenmcgruer.simpleupnp.database.BookmarksDbHelper;
+import com.stephenmcgruer.simpleupnp.database.BookmarksReadTask;
+import com.stephenmcgruer.simpleupnp.database.BookmarksWriteTask;
 import com.stephenmcgruer.simpleupnp.fragments.FileBrowserFragment;
 import com.stephenmcgruer.simpleupnp.fragments.ServerBrowserFragment;
 
@@ -45,14 +49,17 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements
         ServerBrowserFragment.OnFragmentInteractionListener,
-        FileBrowserFragment.OnFragmentInteractionListener {
+        FileBrowserFragment.OnFragmentInteractionListener,
+        BookmarksReadTask.ResultListener, BookmarksWriteTask.ResultListener {
 
     private static final String TAG = "MainActivity";
 
     private ServerBrowserFragment mServerBrowserFragment = null;
     private FileBrowserFragment mFileBrowserFragment = null;
 
-    private ServiceConnection mServiceConnection = new ServiceConnection() {
+    private BookmarksDbHelper mBookmarksDbHelper = null;
+
+    private final ServiceConnection mServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             Log.d(TAG, "onServiceConnected: " + name.flattenToShortString() + ", " + service.toString());
@@ -85,6 +92,9 @@ public class MainActivity extends AppCompatActivity implements
             throw new IllegalStateException("Unable to bind AndroidUpnpServiceImpl");
         }
 
+        // Initialize the database connection.
+        mBookmarksDbHelper = new BookmarksDbHelper(getApplicationContext());
+
         if (mServerBrowserFragment != null)
             throw new IllegalStateException("mServerBrowserFragment should be null in onCreate");
 
@@ -98,6 +108,7 @@ public class MainActivity extends AppCompatActivity implements
     protected void onDestroy() {
         super.onDestroy();
         getApplicationContext().unbindService(mServiceConnection);
+        mBookmarksDbHelper.close();
     }
 
     @Override
@@ -118,31 +129,31 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void onServerSelected(Device device) {
-        if (mServerBrowserFragment == null) {
-            throw new IllegalStateException(
-                    "mServerBrowserFragment should be non-null in onServerSelected");
-        }
-
-        if (mFileBrowserFragment != null) {
-            throw new IllegalStateException(
-                    "mFileBrowserFragment should be null in onServerSelected");
-        }
-
         Service service = device.findService(new UDAServiceType("ContentDirectory"));
         if (service == null) {
             Toast.makeText(this, "No ContentDirectory service found!", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        mFileBrowserFragment = FileBrowserFragment.newInstance(
+        startFileBrowserFragment(device.getIdentity().getUdn().getIdentifierString(), null);
+    }
+
+    @Override
+    public void requestBookmarksForDevice(Device device) {
+        new BookmarksReadTask(mBookmarksDbHelper, this).execute(
                 device.getIdentity().getUdn().getIdentifierString());
+    }
 
-        getSupportFragmentManager().beginTransaction()
-                .remove(mServerBrowserFragment)
-                .add(R.id.fragment_container, mFileBrowserFragment)
-                .commit();
+    @Override
+    public void onBookmarkSelected(Bookmark bookmark) {
+        startFileBrowserFragment(bookmark.getUdn(), bookmark.getContainerId());
+    }
 
-        mServerBrowserFragment = null;
+    @Override
+    public void onBookmarksReadFromDatabase(List<Bookmark> bookmarks) {
+        if (mServerBrowserFragment != null) {
+            mServerBrowserFragment.addBookmarks(bookmarks);
+        }
     }
 
     @Override
@@ -183,5 +194,36 @@ public class MainActivity extends AppCompatActivity implements
         int startIndex = 0;
         mediaClient.queueLoad(mediaItems.toArray(new MediaQueueItem[0]), startIndex,
                 MediaStatus.REPEAT_MODE_REPEAT_ALL_AND_SHUFFLE, null);
+    }
+
+    @Override
+    public void addBookmark(String udn, String containerTitle, String containerId) {
+        new BookmarksWriteTask(mBookmarksDbHelper, this).execute(udn, containerTitle, containerId);
+    }
+
+    @Override
+    public void onBookmarksWriteTaskFailure() {
+        Toast.makeText(this, "Unable to save bookmark", Toast.LENGTH_SHORT).show();
+    }
+
+    private void startFileBrowserFragment(String udn, String initialContainerId) {
+        if (mServerBrowserFragment == null) {
+            throw new IllegalStateException(
+                    "mServerBrowserFragment should be non-null in startFileBrowserFragment");
+        }
+
+        if (mFileBrowserFragment != null) {
+            throw new IllegalStateException(
+                    "mFileBrowserFragment should be null in startFileBrowserFragment");
+        }
+
+        mFileBrowserFragment = FileBrowserFragment.newInstance(udn, initialContainerId);
+
+        getSupportFragmentManager().beginTransaction()
+                .remove(mServerBrowserFragment)
+                .add(R.id.fragment_container, mFileBrowserFragment)
+                .commit();
+
+        mServerBrowserFragment = null;
     }
 }

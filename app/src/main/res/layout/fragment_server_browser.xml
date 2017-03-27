@@ -4,13 +4,17 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-<ListView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<ListView
     android:id="@+id/server_browser_list"
-    android:name="com.stephenmcgruer.simpleupnp.fragments.ServerBrowserFragment"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    tools:context="com.stephenmcgruer.simpleupnp.fragments.ServerBrowserFragment"
+    tools:listitem="@layout/fragment_server_browser_item" />
+
+<ListView
+    android:id="@+id/bookmarks_list"
+    android:layout_below="@+id/server_browser_list"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
     tools:listitem="@layout/fragment_server_browser_item" />
 
 </RelativeLayout>

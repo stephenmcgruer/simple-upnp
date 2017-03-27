@@ -19,7 +19,6 @@ import android.support.v4.app.Fragment;
 import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.meta.LocalDevice;
 import org.fourthline.cling.model.meta.RemoteDevice;
-import org.fourthline.cling.model.types.UDAServiceType;
 import org.fourthline.cling.registry.DefaultRegistryListener;
 import org.fourthline.cling.registry.Registry;
 
@@ -29,8 +28,8 @@ public class DeviceRegistryListener extends DefaultRegistryListener {
     private final DeviceChangeHandler mHandler;
 
     public interface DeviceChangeHandler {
-        public void onDeviceAdded(Device device);
-        public void onDeviceRemoved(Device device);
+        void onDeviceAdded(Device device);
+        void onDeviceRemoved(Device device);
     }
 
     public DeviceRegistryListener(Fragment fragment, DeviceChangeHandler handler) {
@@ -43,20 +42,15 @@ public class DeviceRegistryListener extends DefaultRegistryListener {
      *
      * @param device The device to be added
      */
-    void deviceAdded(final Device device) {
-        if (mFragment.getActivity() == null)
-            return;
-
-        // We only care about devices that provide a ContentDirectory.
-        if (device.findService(new UDAServiceType("ContentDirectory")) == null)
-            return;
-
-        mFragment.getActivity().runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                mHandler.onDeviceAdded(device);
-            }
-        });
+    private void deviceAdded(final Device device) {
+        if (mFragment.getActivity() != null) {
+            mFragment.getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mHandler.onDeviceAdded(device);
+                }
+            });
+        }
     }
 
     /**
