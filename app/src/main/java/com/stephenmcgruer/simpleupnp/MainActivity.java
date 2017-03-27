@@ -36,7 +36,6 @@ import com.google.android.gms.cast.framework.media.RemoteMediaClient;
 import com.stephenmcgruer.simpleupnp.database.BookmarksContract.Bookmark;
 import com.stephenmcgruer.simpleupnp.database.BookmarksDbHelper;
 import com.stephenmcgruer.simpleupnp.database.BookmarksReadTask;
-import com.stephenmcgruer.simpleupnp.database.BookmarksWriteTask;
 import com.stephenmcgruer.simpleupnp.fragments.FileBrowserFragment;
 import com.stephenmcgruer.simpleupnp.fragments.ServerBrowserFragment;
 
@@ -51,7 +50,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity implements
         ServerBrowserFragment.OnFragmentInteractionListener,
         FileBrowserFragment.OnFragmentInteractionListener,
-        BookmarksReadTask.ResultListener, BookmarksWriteTask.ResultListener {
+        BookmarksReadTask.ResultListener {
 
     private static final String TAG = "MainActivity";
 
@@ -200,11 +199,6 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public SQLiteOpenHelper getDbHelper() {
         return mBookmarksDbHelper;
-    }
-
-    @Override
-    public void onBookmarksWriteTaskFailure() {
-        Toast.makeText(this, "Unable to save bookmark", Toast.LENGTH_SHORT).show();
     }
 
     private void startFileBrowserFragment(String udn, String initialContainerId) {
