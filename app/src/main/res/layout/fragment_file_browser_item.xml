@@ -13,13 +13,27 @@
         android:paddingStart="?android:attr/listPreferredItemPaddingStart"
         android:textAppearance="?android:attr/textAppearanceListItemSmall" />
 
+    <CheckBox
+        android:id="@+id/file_browser_list_item_favorite"
+        style="?android:attr/starStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_centerVertical="true"
+        android:checked="false"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
+        android:paddingEnd="6dp"
+        android:visibility="gone" />
+
     <Button
         android:id="@+id/file_browser_list_item_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentEnd="true"
+        android:layout_toStartOf="@id/file_browser_list_item_favorite"
         android:focusable="false"
         android:focusableInTouchMode="false"
+        android:paddingEnd="6dp"
         android:visibility="gone" />
 
 </RelativeLayout>

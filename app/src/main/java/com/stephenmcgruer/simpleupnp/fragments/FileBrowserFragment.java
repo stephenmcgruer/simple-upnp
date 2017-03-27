@@ -18,14 +18,13 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.database.sqlite.SQLiteOpenHelper;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
-import android.support.v7.widget.PopupMenu;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -36,6 +35,10 @@ import com.google.android.gms.cast.MediaInfo;
 import com.google.android.gms.cast.MediaMetadata;
 import com.google.android.gms.cast.MediaQueueItem;
 import com.stephenmcgruer.simpleupnp.R;
+import com.stephenmcgruer.simpleupnp.database.BookmarksContract.Bookmark;
+import com.stephenmcgruer.simpleupnp.database.BookmarksReadTask;
+import com.stephenmcgruer.simpleupnp.database.BookmarksRemoveTask;
+import com.stephenmcgruer.simpleupnp.database.BookmarksWriteTask;
 
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
@@ -58,8 +61,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class FileBrowserFragment extends Fragment implements AdapterView.OnItemClickListener,
-        FileBrowserAdapter.OnItemClickListener, ServiceConnection, AdapterView.OnItemLongClickListener {
+public class FileBrowserFragment extends Fragment implements AdapterView.OnItemClickListener, ServiceConnection,
+        FileBrowserAdapter.OnItemClickListener, BookmarksReadTask.ResultListener, BookmarksRemoveTask.ResultsListener,
+        BookmarksWriteTask.ResultListener {
 
     private static final String TAG = "FileBrowserFragment";
 
@@ -135,7 +139,6 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
         mFileBrowserAdapter.add(FileBrowserAdapter.ListItem.PREVIOUS_CONTAINER_LIST_ITEM);
         view.setAdapter(mFileBrowserAdapter);
         view.setOnItemClickListener(this);
-        view.setOnItemLongClickListener(this);
         return view;
     }
 
@@ -194,30 +197,6 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
     }
 
     @Override
-    public boolean onItemLongClick(AdapterView<?> adapterView, View view, int position, long id) {
-        final FileBrowserAdapter.ListItem listItem = (FileBrowserAdapter.ListItem) adapterView.getItemAtPosition(position);
-        if (listItem.isPreviousContainerListItem() || !listItem.holdsContainer()) {
-            return false;
-        }
-
-        PopupMenu popup = new PopupMenu(getActivity(), view);
-        popup.getMenuInflater().inflate(R.menu.menu_file_list_item, popup.getMenu());
-        popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(MenuItem item) {
-                if (item.getItemId() == R.id.mi_add_bookmark) {
-                    mListener.addBookmark(
-                            mDeviceUdn, listItem.getContainer().getTitle(), listItem.getContainer().getId());
-                }
-                return false;
-            }
-        });
-        popup.show();
-
-        return true;
-    }
-
-    @Override
     public void playItems(List<Item> itemsToPlay) {
         if (mListener == null)
             return;
@@ -239,6 +218,47 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
             }
         }
         mListener.playFiles(mediaItems);
+    }
+
+    @Override
+    public void addBookmark(FileBrowserAdapter.ListItem listItem) {
+        new BookmarksWriteTask(mListener.getDbHelper(), this).execute(
+                mDeviceUdn, listItem.getContainer().getTitle(), listItem.getContainer().getId());
+    }
+
+    @Override
+    public void removeBookmark(FileBrowserAdapter.ListItem listItem) {
+        new BookmarksRemoveTask(mListener.getDbHelper(), this).execute(
+                mDeviceUdn, listItem.getContainer().getId());
+    }
+
+    @Override
+    public void onBookmarksReadFromDatabase(List<Bookmark> bookmarks) {
+        if (bookmarks.size() != 1) {
+            throw new IllegalStateException("Multiple bookmarks returned for single container?");
+        }
+
+        for (int i = 0; i < mFileBrowserAdapter.getCount(); i++) {
+            FileBrowserAdapter.ListItem listItem = mFileBrowserAdapter.getItem(i);
+            if (listItem.holdsContainer() && listItem.getContainer().getId().equals(bookmarks.get(0).getContainerId())) {
+                listItem.setIsBookmarked(true);
+                mFileBrowserAdapter.notifyDataSetChanged();
+            }
+        }
+    }
+
+    @Override
+    public void onBookmarksWriteTaskFailure() {
+        Toast.makeText(getContext(), "Unable to save bookmark", Toast.LENGTH_SHORT).show();
+        // TODO(smcgruer): Uncheck the bookmark.
+    }
+
+    @Override
+    public void onBookmarkRemoveTaskFinished(int numRemoved) {
+        if (numRemoved == 0) {
+            Toast.makeText(getContext(), "Unable to remove bookmark", Toast.LENGTH_SHORT).show();
+            // TODO(smcgruer): Re-check the bookmark.
+        }
     }
 
     public void onBackPressed() {
@@ -267,8 +287,8 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
 
     public interface OnFragmentInteractionListener {
         void onQuitFileBrowsing();
+        SQLiteOpenHelper getDbHelper();
         void playFiles(List<MediaQueueItem> mediaItems);
-        void addBookmark(String udn, String containerTitle, String containerId);
     }
 
     private class SelectContainerBrowse extends Browse {
@@ -292,6 +312,7 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
                         FileBrowserAdapter.ListItem listItem = new FileBrowserAdapter.ListItem(
                                 new ContainerWrapper(container));
                         mFileBrowserAdapter.add(listItem);
+                        new BookmarksReadTask(mListener.getDbHelper(), FileBrowserFragment.this).execute(mDeviceUdn, container.getId());
                         if (!mContainerMap.containsKey(container.getId())) {
                             mContainerMap.put(container.getId(), listItem.getContainer());
                         }

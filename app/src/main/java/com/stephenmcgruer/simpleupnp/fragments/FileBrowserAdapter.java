@@ -22,6 +22,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -33,7 +35,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem> implements View.OnClickListener {
+class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem>
+        implements View.OnClickListener, CompoundButton.OnCheckedChangeListener {
 
     private final OnItemClickListener mListener;
 
@@ -52,6 +55,7 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem> imple
             rowView = inflator.inflate(R.layout.fragment_file_browser_item, parent, false);
             ViewHolder holder = new ViewHolder();
             holder.text = (TextView) rowView.findViewById(R.id.file_browser_list_item_text);
+            holder.checkBox = (CheckBox) rowView.findViewById(R.id.file_browser_list_item_favorite);
             holder.button = (Button) rowView.findViewById(R.id.file_browser_list_item_button);
             rowView.setTag(holder);
         }
@@ -61,6 +65,10 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem> imple
         if (listItem != null) {
             holder.position = position;
             holder.text.setText(listItem.toString());
+            holder.checkBox.setVisibility(
+                    !listItem.isPreviousContainerListItem() && listItem.holdsContainer() ? View.VISIBLE : View.GONE);
+            holder.checkBox.setChecked(listItem.isBookmarked());
+            holder.checkBox.setOnCheckedChangeListener(this);
             holder.button.setText(R.string.play_button_text);
             holder.button.setVisibility(listItem.hasMediaItems() ? View.VISIBLE : View.GONE);
             holder.button.setOnClickListener(this);
@@ -71,19 +79,33 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem> imple
 
     @Override
     public void onClick(View view) {
-        if (mListener == null)
-            return;
+        if (view.getId() != R.id.file_browser_list_item_button) {
+            throw new IllegalStateException("Unhandled view in onClick: " + view.toString());
+        }
 
         RelativeLayout parent = (RelativeLayout) view.getParent();
         ViewHolder holder = (ViewHolder) parent.getTag();
         ListItem listItem = getItem(holder.position);
-        if (listItem != null) {
+        if (mListener != null && listItem != null) {
             mListener.playItems(listItem.getMediaItems());
+        }
+    }
+
+    @Override
+    public void onCheckedChanged(CompoundButton view, boolean isChecked) {
+        RelativeLayout parent = (RelativeLayout) view.getParent();
+        ViewHolder holder = (ViewHolder) parent.getTag();
+        if (isChecked && mListener != null) {
+            mListener.addBookmark(getItem(holder.position));
+        } else {
+            mListener.removeBookmark(getItem(holder.position));
         }
     }
 
     interface OnItemClickListener {
         void playItems(List<Item> items);
+        void addBookmark(ListItem listItem);
+        void removeBookmark(ListItem item);
     }
 
     static class ListItem {
@@ -92,6 +114,7 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem> imple
         private final ContainerWrapper mContainer;
         private final Item mItem;
         private List<Item> mMediaItems;
+        private boolean mIsBookmarked;
 
         ListItem(@NonNull ContainerWrapper container) {
             this(container, null);
@@ -105,6 +128,7 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem> imple
             mContainer = container;
             mItem = item;
             mMediaItems = new ArrayList<>();
+            mIsBookmarked = false;
         }
 
         @Override
@@ -158,11 +182,20 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem> imple
         boolean hasMediaItems() {
             return mMediaItems.size() > 0;
         }
+
+        public boolean isBookmarked() {
+            return mIsBookmarked;
+        }
+
+        public void setIsBookmarked(boolean isBookmarked) {
+            mIsBookmarked = isBookmarked;
+        }
     }
 
     private static class ViewHolder {
         int position;
         TextView text;
+        CheckBox checkBox;
         Button button;
     }
 }

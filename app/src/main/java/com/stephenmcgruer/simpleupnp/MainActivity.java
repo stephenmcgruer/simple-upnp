@@ -18,6 +18,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.database.sqlite.SQLiteOpenHelper;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
@@ -141,7 +142,7 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void requestBookmarksForDevice(Device device) {
         new BookmarksReadTask(mBookmarksDbHelper, this).execute(
-                device.getIdentity().getUdn().getIdentifierString());
+                device.getIdentity().getUdn().getIdentifierString(), "%");
     }
 
     @Override
@@ -197,8 +198,8 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     @Override
-    public void addBookmark(String udn, String containerTitle, String containerId) {
-        new BookmarksWriteTask(mBookmarksDbHelper, this).execute(udn, containerTitle, containerId);
+    public SQLiteOpenHelper getDbHelper() {
+        return mBookmarksDbHelper;
     }
 
     @Override

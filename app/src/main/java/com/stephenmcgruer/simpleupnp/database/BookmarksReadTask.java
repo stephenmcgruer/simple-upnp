@@ -18,13 +18,17 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.os.AsyncTask;
+import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import com.stephenmcgruer.simpleupnp.database.BookmarksContract.Bookmark;
 
 public class BookmarksReadTask extends AsyncTask<String, Void, List<Bookmark>> {
+    private static final String TAG = "BookmarksReadTask";
+
     public interface ResultListener {
         void onBookmarksReadFromDatabase(List<Bookmark> bookmarks);
     }
@@ -38,20 +42,21 @@ public class BookmarksReadTask extends AsyncTask<String, Void, List<Bookmark>> {
     }
 
     @Override
-    protected List<BookmarksContract.Bookmark> doInBackground(String... udns) {
-        if (udns.length < 1) {
+    protected List<BookmarksContract.Bookmark> doInBackground(String... params) {
+        if (params.length < 2) {
             return null;
         }
 
-        String udn = udns[0];
         String[] projection = {
                 BookmarksContract.BookmarksEntry.COLUMN_NAME_CONTAINER_NAME,
                 BookmarksContract.BookmarksEntry.COLUMN_NAME_CONTAINER_ID,
         };
-        String selection = BookmarksContract.BookmarksEntry.COLUMN_NAME_UDN + " = ?";
-        String[] selectionArgs = { udn };
+        String selection = BookmarksContract.BookmarksEntry.COLUMN_NAME_UDN + " = ? AND " +
+                BookmarksContract.BookmarksEntry.COLUMN_NAME_CONTAINER_ID + " LIKE ?";
+        String[] selectionArgs = { params[0], params[1] };
 
         SQLiteDatabase db = mDbHelper.getReadableDatabase();
+        Log.d(TAG, "doInBackground: executing selection " + selection + " with args " + Arrays.toString(selectionArgs));
         Cursor cursor = db.query(
                 BookmarksContract.BookmarksEntry.TABLE_NAME,
                 projection,
@@ -67,7 +72,7 @@ public class BookmarksReadTask extends AsyncTask<String, Void, List<Bookmark>> {
                     cursor.getColumnIndexOrThrow(BookmarksContract.BookmarksEntry.COLUMN_NAME_CONTAINER_NAME));
             String containerId = cursor.getString(
                     cursor.getColumnIndexOrThrow(BookmarksContract.BookmarksEntry.COLUMN_NAME_CONTAINER_ID));
-            bookmarks.add(new BookmarksContract.Bookmark(udn, containerName, containerId));
+            bookmarks.add(new BookmarksContract.Bookmark(params[0], containerName, containerId));
         }
 
         cursor.close();
