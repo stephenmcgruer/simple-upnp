@@ -15,8 +15,11 @@
 package com.stephenmcgruer.simpleupnp.fragments;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.support.annotation.NonNull;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,6 +27,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -37,8 +41,16 @@ import java.util.Objects;
 
 class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem>
         implements View.OnClickListener, CompoundButton.OnCheckedChangeListener {
+    private static final String TAG = "FileBrowserAdapter";
+
+    interface OnItemClickListener {
+        void playItems(List<Item> items);
+        void addBookmark(String bookmarkName, String containerId);
+        void removeBookmark(String containerId);
+    }
 
     private final OnItemClickListener mListener;
+    private boolean mProgrammaticallyModifyingCheckboxes = false;
 
     FileBrowserAdapter(OnItemClickListener listener, Context context, int resource) {
         super(context, resource);
@@ -65,10 +77,14 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem>
         if (listItem != null) {
             holder.position = position;
             holder.text.setText(listItem.toString());
+
+            setModifyingCheckboxes(true);
             holder.checkBox.setVisibility(
                     !listItem.isPreviousContainerListItem() && listItem.holdsContainer() ? View.VISIBLE : View.GONE);
             holder.checkBox.setChecked(listItem.isBookmarked());
             holder.checkBox.setOnCheckedChangeListener(this);
+            setModifyingCheckboxes(false);
+
             holder.button.setText(R.string.play_button_text);
             holder.button.setVisibility(listItem.hasMediaItems() ? View.VISIBLE : View.GONE);
             holder.button.setOnClickListener(this);
@@ -92,20 +108,56 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem>
     }
 
     @Override
-    public void onCheckedChanged(CompoundButton view, boolean isChecked) {
+    public void onCheckedChanged(final CompoundButton view, boolean isChecked) {
+        if (mProgrammaticallyModifyingCheckboxes)
+            return;
+
         RelativeLayout parent = (RelativeLayout) view.getParent();
-        ViewHolder holder = (ViewHolder) parent.getTag();
+        final ViewHolder holder = (ViewHolder) parent.getTag();
+        final ListItem listItem = getItem(holder.position);
+        if (listItem == null || !listItem.holdsContainer()) {
+            return;
+        }
+
         if (isChecked && mListener != null) {
-            mListener.addBookmark(getItem(holder.position));
+            AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(getContext());
+            dialogBuilder.setTitle(R.string.bookmark_name_dialog_title);
+
+            final EditText inputEditText = new EditText(getContext());
+            inputEditText.setHint(listItem.getContainer().getTitle());
+            inputEditText.setSelectAllOnFocus(true);
+            dialogBuilder.setView(inputEditText);
+
+            dialogBuilder.setPositiveButton(R.string.bookmark_name_dialog_ok_button_text,
+                    new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    Log.d(TAG, "onClick: OK button pressed");
+                    String bookmarkName = inputEditText.getText().toString();
+                    if (bookmarkName.isEmpty()) {
+                        bookmarkName = listItem.getContainer().getTitle();
+                    }
+                    mListener.addBookmark(bookmarkName, listItem.getContainer().getId());
+                }
+            });
+            dialogBuilder.setNegativeButton(R.string.bookmark_name_dialog_cancel_button_text,
+                    new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    Log.d(TAG, "onClick: Cancel button pressed");
+                    setModifyingCheckboxes(true);
+                    view.setChecked(false);
+                    setModifyingCheckboxes(false);
+                }
+            });
+            dialogBuilder.show();
         } else {
-            mListener.removeBookmark(getItem(holder.position));
+            mListener.removeBookmark(listItem.getContainer().getId());
         }
     }
 
-    interface OnItemClickListener {
-        void playItems(List<Item> items);
-        void addBookmark(ListItem listItem);
-        void removeBookmark(ListItem item);
+    public void setModifyingCheckboxes(boolean modifyingCheckboxes) {
+        mProgrammaticallyModifyingCheckboxes = modifyingCheckboxes;
     }
 
     static class ListItem {

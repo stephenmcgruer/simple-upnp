@@ -113,7 +113,8 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
         mCurrentContainer = ContainerWrapper.ROOT_CONTAINER;
 
         if (getArguments().getString(ARGS_INITIAL_CONTAINER_ID) != null) {
-            ContainerWrapper wrapper = new ContainerWrapper("Test", getArguments().getString(ARGS_INITIAL_CONTAINER_ID), BOOKMARK_PARENT_ID);
+            ContainerWrapper wrapper = new ContainerWrapper(
+                    "Bookmark", getArguments().getString(ARGS_INITIAL_CONTAINER_ID), BOOKMARK_PARENT_ID);
             mContainerMap.put(wrapper.getId(), wrapper);
             mCurrentContainer = wrapper;
         }
@@ -221,15 +222,13 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
     }
 
     @Override
-    public void addBookmark(FileBrowserAdapter.ListItem listItem) {
-        new BookmarksWriteTask(mListener.getDbHelper(), this).execute(
-                mDeviceUdn, listItem.getContainer().getTitle(), listItem.getContainer().getId());
+    public void addBookmark(String bookmarkName, String containerId) {
+        new BookmarksWriteTask(mListener.getDbHelper(), this).execute(mDeviceUdn, bookmarkName, containerId);
     }
 
     @Override
-    public void removeBookmark(FileBrowserAdapter.ListItem listItem) {
-        new BookmarksRemoveTask(mListener.getDbHelper(), this).execute(
-                mDeviceUdn, listItem.getContainer().getId());
+    public void removeBookmark(String containerId) {
+        new BookmarksRemoveTask(mListener.getDbHelper(), this).execute(mDeviceUdn, containerId);
     }
 
     @Override
@@ -238,9 +237,10 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
             throw new IllegalStateException("Multiple bookmarks returned for single container?");
         }
 
+        Bookmark bookmark = bookmarks.get(0);
         for (int i = 0; i < mFileBrowserAdapter.getCount(); i++) {
             FileBrowserAdapter.ListItem listItem = mFileBrowserAdapter.getItem(i);
-            if (listItem.holdsContainer() && listItem.getContainer().getId().equals(bookmarks.get(0).getContainerId())) {
+            if (listItem.holdsContainer() && listItem.getContainer().getId().equals(bookmark.getContainerId())) {
                 listItem.setIsBookmarked(true);
                 mFileBrowserAdapter.notifyDataSetChanged();
             }
@@ -312,7 +312,8 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
                         FileBrowserAdapter.ListItem listItem = new FileBrowserAdapter.ListItem(
                                 new ContainerWrapper(container));
                         mFileBrowserAdapter.add(listItem);
-                        new BookmarksReadTask(mListener.getDbHelper(), FileBrowserFragment.this).execute(mDeviceUdn, container.getId());
+                        new BookmarksReadTask(mListener.getDbHelper(), FileBrowserFragment.this)
+                                .execute(mDeviceUdn, container.getId());
                         if (!mContainerMap.containsKey(container.getId())) {
                             mContainerMap.put(container.getId(), listItem.getContainer());
                         }

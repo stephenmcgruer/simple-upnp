@@ -18,10 +18,13 @@ import android.content.ContentValues;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.os.AsyncTask;
+import android.util.Log;
 
 import com.stephenmcgruer.simpleupnp.database.BookmarksContract.BookmarksEntry;
 
 public class BookmarksWriteTask extends AsyncTask<String, Void, Boolean> {
+    private static final String TAG = "BookmarksWriteTask";
+
     public interface ResultListener {
         void onBookmarksWriteTaskFailure();
     }
@@ -49,6 +52,7 @@ public class BookmarksWriteTask extends AsyncTask<String, Void, Boolean> {
         values.put(BookmarksEntry.COLUMN_NAME_CONTAINER_ID, containerId);
 
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        Log.d(TAG, "doInBackground: writing values " + values.toString() + " to " + BookmarksEntry.TABLE_NAME);
         return db.replace(BookmarksEntry.TABLE_NAME, null, values) != -1;
     }
 

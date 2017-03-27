@@ -5,4 +5,7 @@
     <string name="play_button_text">Play</string>
     <string name="menu_add_bookmark">Add Bookmark</string>
     <string name="bookmarks_text">Bookmarks</string>
+    <string name="bookmark_name_dialog_title">Bookmark Name</string>
+    <string name="bookmark_name_dialog_ok_button_text">OK</string>
+    <string name="bookmark_name_dialog_cancel_button_text">Cancel</string>
 </resources>
