@@ -50,6 +50,7 @@ public class BookmarksReadTask extends AsyncTask<String, Void, List<Bookmark>> {
         String[] projection = {
                 BookmarksContract.BookmarksEntry.COLUMN_NAME_CONTAINER_NAME,
                 BookmarksContract.BookmarksEntry.COLUMN_NAME_CONTAINER_ID,
+                BookmarksContract.BookmarksEntry.COLUMN_NAME_DEVICE_NAME,
         };
         String selection = BookmarksContract.BookmarksEntry.COLUMN_NAME_UDN + " = ? AND " +
                 BookmarksContract.BookmarksEntry.COLUMN_NAME_CONTAINER_ID + " LIKE ?";
@@ -72,7 +73,9 @@ public class BookmarksReadTask extends AsyncTask<String, Void, List<Bookmark>> {
                     cursor.getColumnIndexOrThrow(BookmarksContract.BookmarksEntry.COLUMN_NAME_CONTAINER_NAME));
             String containerId = cursor.getString(
                     cursor.getColumnIndexOrThrow(BookmarksContract.BookmarksEntry.COLUMN_NAME_CONTAINER_ID));
-            bookmarks.add(new BookmarksContract.Bookmark(params[0], containerName, containerId));
+            String deviceName = cursor.getString(
+                    cursor.getColumnIndexOrThrow(BookmarksContract.BookmarksEntry.COLUMN_NAME_DEVICE_NAME));
+            bookmarks.add(new BookmarksContract.Bookmark(params[0], containerName, containerId, deviceName));
         }
 
         cursor.close();

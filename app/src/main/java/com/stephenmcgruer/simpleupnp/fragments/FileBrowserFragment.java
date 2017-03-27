@@ -74,6 +74,7 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
     private static final String BOOKMARK_PARENT_ID = "-1";
 
     private String mDeviceUdn;
+    private String mDeviceName;
 
     private FileBrowserAdapter mFileBrowserAdapter;
 
@@ -173,6 +174,8 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
             throw new IllegalStateException("Unable to find ContentDirectory service for device "
                     + mDeviceUdn);
         }
+        mDeviceName = (device.getDetails() != null && device.getDetails().getFriendlyName() != null)
+                ? device.getDetails().getFriendlyName() : device.getDisplayString();
 
         selectContainer(mCurrentContainer);
     }
@@ -223,7 +226,8 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
 
     @Override
     public void addBookmark(String bookmarkName, String containerId) {
-        new BookmarksWriteTask(mListener.getDbHelper(), this).execute(mDeviceUdn, bookmarkName, containerId);
+        new BookmarksWriteTask(mListener.getDbHelper(), this)
+                .execute(mDeviceUdn, bookmarkName, containerId, mDeviceName);
     }
 
     @Override
@@ -240,7 +244,8 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
         Bookmark bookmark = bookmarks.get(0);
         for (int i = 0; i < mFileBrowserAdapter.getCount(); i++) {
             FileBrowserAdapter.ListItem listItem = mFileBrowserAdapter.getItem(i);
-            if (listItem.holdsContainer() && listItem.getContainer().getId().equals(bookmark.getContainerId())) {
+            if (listItem != null && listItem.holdsContainer() &&
+                    listItem.getContainer().getId().equals(bookmark.getContainerId())) {
                 listItem.setIsBookmarked(true);
                 mFileBrowserAdapter.notifyDataSetChanged();
             }
@@ -248,9 +253,20 @@ public class FileBrowserFragment extends Fragment implements AdapterView.OnItemC
     }
 
     @Override
-    public void onBookmarksWriteTaskFailure() {
-        Toast.makeText(getContext(), "Unable to save bookmark", Toast.LENGTH_SHORT).show();
-        // TODO(smcgruer): Uncheck the bookmark.
+    public void onBookmarksWriteTaskFinished(boolean success, String containerId) {
+        if (success) {
+            for (int i = 0; i < mFileBrowserAdapter.getCount(); i++) {
+                FileBrowserAdapter.ListItem listItem = mFileBrowserAdapter.getItem(i);
+                if (listItem != null && listItem.holdsContainer() &&
+                        listItem.getContainer().getId().equals(containerId)) {
+                    listItem.setIsBookmarked(true);
+                    mFileBrowserAdapter.notifyDataSetChanged();
+                }
+            }
+        } else {
+            Toast.makeText(getContext(), "Unable to save bookmark", Toast.LENGTH_SHORT).show();
+            // TODO(smcgruer): Uncheck the bookmark.
+        }
     }
 
     @Override

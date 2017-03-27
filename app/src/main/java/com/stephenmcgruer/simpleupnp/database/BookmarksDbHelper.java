@@ -27,8 +27,9 @@ public class BookmarksDbHelper extends SQLiteOpenHelper {
                     BookmarksEntry.COLUMN_NAME_UDN + " TEXT, " +
                     BookmarksEntry.COLUMN_NAME_CONTAINER_NAME + " TEXT, " +
                     BookmarksEntry.COLUMN_NAME_CONTAINER_ID + " TEXT, " +
+                    BookmarksEntry.COLUMN_NAME_DEVICE_NAME + " TEXT, " +
                     " PRIMARY KEY (" +
-                        BookmarksEntry.COLUMN_NAME_UDN +
+                        BookmarksEntry.COLUMN_NAME_UDN + ", " + BookmarksEntry.COLUMN_NAME_CONTAINER_ID +
                     ")" +
             ")";
 

@@ -24,17 +24,20 @@ public class BookmarksContract {
         public static final String COLUMN_NAME_UDN = "udn";
         public static final String COLUMN_NAME_CONTAINER_NAME = "container_name";
         public static final String COLUMN_NAME_CONTAINER_ID = "container_id";
+        public static final String COLUMN_NAME_DEVICE_NAME = "device_name";
     }
 
     public static class Bookmark {
         private final String mUdn;
         private final String mContainerName;
         private final String mContainerId;
+        private final String mDeviceName;
 
-        public Bookmark(String udn, String containerName, String containerId) {
+        public Bookmark(String udn, String containerName, String containerId, String deviceName) {
             mUdn = udn;
             mContainerName = containerName;
             mContainerId = containerId;
+            mDeviceName = deviceName;
         }
 
         public String getUdn() {
@@ -49,20 +52,25 @@ public class BookmarksContract {
             return mContainerId;
         }
 
+        public String getDeviceName() {
+            return mDeviceName;
+        }
+
         @Override
         public boolean equals(Object obj) {
             if (obj instanceof Bookmark) {
                 Bookmark other = (Bookmark) obj;
                 return Objects.equals(mUdn, other.mUdn) &&
                         Objects.equals(mContainerName, other.mContainerName) &&
-                        Objects.equals(mContainerId, other.mContainerId);
+                        Objects.equals(mContainerId, other.mContainerId) &&
+                        Objects.equals(mDeviceName, other.mDeviceName);
             }
             return false;
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(mUdn, mContainerName, mContainerId);
+            return Objects.hash(mUdn, mContainerName, mContainerId, mDeviceName);
         }
     }
 }

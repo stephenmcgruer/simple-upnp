@@ -26,11 +26,12 @@ public class BookmarksWriteTask extends AsyncTask<String, Void, Boolean> {
     private static final String TAG = "BookmarksWriteTask";
 
     public interface ResultListener {
-        void onBookmarksWriteTaskFailure();
+        void onBookmarksWriteTaskFinished(boolean success, String containerId);
     }
 
     private final SQLiteOpenHelper mDbHelper;
     private final ResultListener mListener;
+    private String mContainerId = "";
 
     public BookmarksWriteTask(SQLiteOpenHelper dbHelper, ResultListener listener) {
         mDbHelper = dbHelper;
@@ -38,18 +39,20 @@ public class BookmarksWriteTask extends AsyncTask<String, Void, Boolean> {
     }
     @Override
     protected Boolean doInBackground(String... params) {
-        if (params.length < 3) {
+        if (params.length < 4) {
             return false;
         }
 
         String udn = params[0];
         String containerName = params[1];
-        String containerId = params[2];
+        mContainerId = params[2];
+        String deviceName = params[3];
 
         ContentValues values = new ContentValues();
         values.put(BookmarksEntry.COLUMN_NAME_UDN, udn);
         values.put(BookmarksEntry.COLUMN_NAME_CONTAINER_NAME, containerName);
-        values.put(BookmarksEntry.COLUMN_NAME_CONTAINER_ID, containerId);
+        values.put(BookmarksEntry.COLUMN_NAME_CONTAINER_ID, mContainerId);
+        values.put(BookmarksEntry.COLUMN_NAME_DEVICE_NAME, deviceName);
 
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
         Log.d(TAG, "doInBackground: writing values " + values.toString() + " to " + BookmarksEntry.TABLE_NAME);
@@ -59,8 +62,6 @@ public class BookmarksWriteTask extends AsyncTask<String, Void, Boolean> {
     @Override
     protected void onPostExecute(Boolean success) {
         super.onPostExecute(success);
-        if (!success) {
-            mListener.onBookmarksWriteTaskFailure();
-        }
+        mListener.onBookmarksWriteTaskFinished(success, mContainerId);
     }
 }

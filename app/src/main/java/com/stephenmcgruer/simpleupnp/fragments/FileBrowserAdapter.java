@@ -112,6 +112,9 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem>
         if (mProgrammaticallyModifyingCheckboxes)
             return;
 
+        if (mListener == null)
+            return;
+
         RelativeLayout parent = (RelativeLayout) view.getParent();
         final ViewHolder holder = (ViewHolder) parent.getTag();
         final ListItem listItem = getItem(holder.position);
@@ -119,7 +122,7 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem>
             return;
         }
 
-        if (isChecked && mListener != null) {
+        if (isChecked) {
             AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(getContext());
             dialogBuilder.setTitle(R.string.bookmark_name_dialog_title);
 
@@ -156,7 +159,7 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem>
         }
     }
 
-    public void setModifyingCheckboxes(boolean modifyingCheckboxes) {
+    private void setModifyingCheckboxes(boolean modifyingCheckboxes) {
         mProgrammaticallyModifyingCheckboxes = modifyingCheckboxes;
     }
 
@@ -235,11 +238,11 @@ class FileBrowserAdapter extends ArrayAdapter<FileBrowserAdapter.ListItem>
             return mMediaItems.size() > 0;
         }
 
-        public boolean isBookmarked() {
+        boolean isBookmarked() {
             return mIsBookmarked;
         }
 
-        public void setIsBookmarked(boolean isBookmarked) {
+        void setIsBookmarked(boolean isBookmarked) {
             mIsBookmarked = isBookmarked;
         }
     }

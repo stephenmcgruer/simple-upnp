@@ -202,7 +202,7 @@ public class ServerBrowserFragment extends Fragment implements AdapterView.OnIte
         List<BookmarkWrapper> toRemove = new ArrayList<>();
         for (int i = 0; i < mBookmarkListAdapter.getCount(); i++) {
             BookmarkWrapper wrapper = mBookmarkListAdapter.getItem(i);
-            if (wrapper.getBookmark().getUdn().equals(udn)) {
+            if (wrapper != null && wrapper.getBookmark().getUdn().equals(udn)) {
                 toRemove.add(wrapper);
             }
         }
@@ -279,7 +279,7 @@ public class ServerBrowserFragment extends Fragment implements AdapterView.OnIte
     private static class BookmarkWrapper {
         private final Bookmark mBookmark;
 
-        public BookmarkWrapper(Bookmark bookmark) {
+        BookmarkWrapper(Bookmark bookmark) {
             mBookmark = bookmark;
         }
 
@@ -303,7 +303,8 @@ public class ServerBrowserFragment extends Fragment implements AdapterView.OnIte
 
         @Override
         public String toString() {
-            return mBookmark.getContainerName() + " (" + mBookmark.getUdn() + ")";
+            return mBookmark.getContainerName() + " (on " + mBookmark.getDeviceName() + ")";
+
         }
     }
 }
