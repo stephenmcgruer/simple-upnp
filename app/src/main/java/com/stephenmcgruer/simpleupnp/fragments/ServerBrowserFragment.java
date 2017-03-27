@@ -30,6 +30,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 import com.stephenmcgruer.simpleupnp.R;
 import com.stephenmcgruer.simpleupnp.cling.DeviceRegistryListener;
@@ -52,8 +53,8 @@ public class ServerBrowserFragment extends Fragment implements AdapterView.OnIte
     private OnFragmentInteractionListener mListener;
 
     private ArrayAdapter<DeviceWrapper> mServerListAdapter;
+    private TextView mBookmarkTextView;
     private ArrayAdapter<BookmarkWrapper> mBookmarkListAdapter;
-
 
     private AndroidUpnpService mUpnpService;
     private final DeviceRegistryListener mRegistryListener = new DeviceRegistryListener(this, this);
@@ -122,6 +123,8 @@ public class ServerBrowserFragment extends Fragment implements AdapterView.OnIte
                 new ArrayAdapter<>(serverListView.getContext(), R.layout.fragment_server_browser_item);
         serverListView.setAdapter(mServerListAdapter);
         serverListView.setOnItemClickListener(this);
+
+        mBookmarkTextView = (TextView) relativeLayoutView.findViewById(R.id.bookmarks_text);
 
         ListView bookmarkListView = (ListView) relativeLayoutView.findViewById(R.id.bookmarks_list);
         mBookmarkListAdapter =
@@ -209,6 +212,9 @@ public class ServerBrowserFragment extends Fragment implements AdapterView.OnIte
         for (BookmarkWrapper wrapper : toRemove) {
             mBookmarkListAdapter.remove(wrapper);
         }
+        if (mBookmarkListAdapter.isEmpty()) {
+            mBookmarkTextView.setVisibility(View.GONE);
+        }
         mBookmarkListAdapter.notifyDataSetChanged();
     }
 
@@ -222,6 +228,7 @@ public class ServerBrowserFragment extends Fragment implements AdapterView.OnIte
                 mBookmarkListAdapter.add(wrapper);
             }
         }
+        mBookmarkTextView.setVisibility(View.VISIBLE);
         mBookmarkListAdapter.notifyDataSetChanged();
     }
 

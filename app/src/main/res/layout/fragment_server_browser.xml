@@ -4,17 +4,27 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-<ListView
-    android:id="@+id/server_browser_list"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    tools:listitem="@layout/fragment_server_browser_item" />
+    <ListView
+        android:id="@+id/server_browser_list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        tools:listitem="@layout/fragment_server_browser_item" />
 
-<ListView
-    android:id="@+id/bookmarks_list"
-    android:layout_below="@+id/server_browser_list"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    tools:listitem="@layout/fragment_server_browser_item" />
+    <TextView
+        android:id="@+id/bookmarks_text"
+        android:layout_below="@+id/server_browser_list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="12dp"
+        android:text="@string/bookmarks_text"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:visibility="gone" />
+
+    <ListView
+        android:id="@+id/bookmarks_list"
+        android:layout_below="@+id/bookmarks_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        tools:listitem="@layout/fragment_server_browser_item" />
 
 </RelativeLayout>

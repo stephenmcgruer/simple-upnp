@@ -4,4 +4,5 @@
     <string name="media_route_menu_item_title">Cast</string>
     <string name="play_button_text">Play</string>
     <string name="menu_add_bookmark">Add Bookmark</string>
+    <string name="bookmarks_text">Bookmarks</string>
 </resources>
